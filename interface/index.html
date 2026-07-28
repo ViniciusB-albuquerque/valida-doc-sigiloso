@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<title>VerificaJus Sigilo — Interface mínima (dev)</title>
+<script src="https://unpkg.com/ethers@6/dist/ethers.umd.min.js" type="application/javascript"></script>
+<style>
+  :root { color-scheme: light; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    max-width: 780px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+    color: #1c1c1c;
+    background: #fafafa;
+  }
+  h1 { font-size: 1.3rem; margin-bottom: 0; }
+  .aviso {
+    background: #fff4e5;
+    border: 1px solid #f0c36d;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    margin: 1rem 0 1.5rem;
+  }
+  section {
+    background: white;
+    border: 1px solid #e2e2e2;
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+  section h2 { font-size: 1rem; margin-top: 0; }
+  label { display: block; font-size: 0.85rem; margin: 0.6rem 0 0.2rem; color: #444; }
+  input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 0.9rem;
+  }
+  button {
+    margin-top: 0.8rem;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    background: #1f2933;
+    color: white;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+  button.secundario { background: #52606d; }
+  button:disabled { background: #b0b7bd; cursor: not-allowed; }
+  .resultado {
+    margin-top: 0.8rem;
+    padding: 0.7rem;
+    background: #f4f6f7;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .status-pill {
+    display: inline-block;
+    padding: 0.1rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+  .status-Valido { background: #d7f5df; color: #1a7a3d; }
+  .status-Expirado { background: #f5e9d7; color: #8a5b1a; }
+  .status-Revogado { background: #f7d9d9; color: #a12b2b; }
+  .status-Substituido { background: #dde3f7; color: #2b3ea1; }
+  #log { max-height: 220px; overflow-y: auto; font-size: 0.78rem; }
+  #contaAtual { font-size: 0.82rem; color: #444; }
+</style>
+</head>
+<body>
+
+<h1>VerificaJus Sigilo — Interface mínima</h1>
+<div class="aviso">
+  Ferramenta de <strong>desenvolvimento/teste</strong>, não é a interface final do projeto.
+  Ainda não implementa os 3 perfis de acesso (Polícia Federal, companhia aérea, Conselho
+  Tutelar) nem o QR Code — isso é responsabilidade do backend com RBAC, que ainda não existe.
+  Aqui você fala <em>diretamente</em> com o contrato pelo MetaMask, como se fosse o
+  backend da Vara ou um verificador manual.
+</div>
+
+<section>
+  <h2>1. Conexão</h2>
+  <button id="btnConectar">Conectar MetaMask</button>
+  <div id="contaAtual" class="resultado" style="display:none;"></div>
+
+  <label for="inputEndereco">Endereço do contrato (copiado do deploy)</label>
+  <input id="inputEndereco" placeholder="0x..." />
+  <button id="btnCarregar" class="secundario">Carregar contrato</button>
+</section>
+
+<section>
+  <h2>2. Registrar documento (só funciona se você for a Vara)</h2>
+  <label for="regRotulo">Rótulo do documento (ex.: alvara-viagem-0001)</label>
+  <input id="regRotulo" placeholder="alvara-viagem-0001" />
+  <label for="regConteudo">Rótulo do "conteúdo" (simula o hash que o backend calcularia do PDF/JSON real)</label>
+  <input id="regConteudo" placeholder="conteudo-completo-do-alvara-0001" />
+  <label for="regExpira">Expira em (opcional — deixe vazio para sem expiração)</label>
+  <input id="regExpira" type="datetime-local" />
+  <button id="btnRegistrar">Registrar</button>
+  <div id="resultadoRegistrar" class="resultado" style="display:none;"></div>
+</section>
+
+<section>
+  <h2>3. Consultar documento</h2>
+  <label for="consRotulo">Rótulo do documento</label>
+  <input id="consRotulo" placeholder="alvara-viagem-0001" />
+  <button id="btnConsultar">Consultar status</button>
+  <button id="btnRegistroCompleto" class="secundario">Ver registro completo</button>
+  <div id="resultadoConsulta" class="resultado" style="display:none;"></div>
+</section>
+
+<section>
+  <h2>4. Revogar documento (só funciona se você for a Vara)</h2>
+  <label for="revRotulo">Rótulo do documento</label>
+  <input id="revRotulo" placeholder="alvara-viagem-0001" />
+  <button id="btnRevogar">Revogar</button>
+  <div id="resultadoRevogar" class="resultado" style="display:none;"></div>
+</section>
+
+<section>
+  <h2>5. Log de eventos on-chain</h2>
+  <div id="log" class="resultado">Nenhum evento ainda. Registre ou revogue um documento acima.</div>
+</section>
+
+<script>
+// ABI mínima e equivalente à extraída do Hardhat (artifacts/.../DocumentoSigilosoRegistry.json)
+// ou do botão "ABI" do Remix. Formato "human-readable" do ethers.js.
+const ABI = [
+  "function vara() view returns (address)",
+  "function registrarDocumento(bytes32 documentId, bytes32 documentHash, uint64 expiraEm)",
+  "function revogarDocumento(bytes32 documentId)",
+  "function substituirDocumento(bytes32 documentIdAntigo, bytes32 documentIdNovo, bytes32 documentHashNovo, uint64 expiraEmNovo)",
+  "function consultarStatus(bytes32 documentId) view returns (uint8)",
+  "function obterRegistro(bytes32 documentId) view returns (bytes32 documentHash, address emissor, uint64 emitidoEm, uint64 expiraEm, uint8 status, bytes32 substituidoPor)",
+  "function transferirVara(address novaVara)",
+  "event DocumentoRegistrado(bytes32 indexed documentId, bytes32 indexed documentHash, address indexed emissor, uint64 expiraEm)",
+  "event DocumentoRevogado(bytes32 indexed documentId, address indexed revogadoPor, uint64 revogadoEm)",
+  "event DocumentoSubstituido(bytes32 indexed documentIdAntigo, bytes32 indexed documentIdNovo, address indexed responsavel)",
+  "error ApenasVara()",
+  "error DocumentIdInvalido()",
+  "error DocumentHashInvalido()",
+  "error EnderecoInvalido()",
+  "error DocumentoJaRegistrado(bytes32 documentId)",
+  "error DocumentoInexistente(bytes32 documentId)",
+  "error DocumentoNaoValido(bytes32 documentId, uint8 statusAtual)"
+];
+
+const STATUS_NOMES = ["Valido", "Expirado", "Revogado", "Substituido"];
+
+let provider, signer, contrato;
+
+// Sem isso, trocar de conta/rede dentro do MetaMask não atualiza a página —
+// era exatamente o problema que te confundiu (ficava conectado com a conta/rede
+// antiga até clicar em "Conectar MetaMask" de novo). Recarregar a página é a
+// forma mais simples e robusta de evitar estado desatualizado.
+if (window.ethereum) {
+  window.ethereum.on("accountsChanged", () => window.location.reload());
+  window.ethereum.on("chainChanged", () => window.location.reload());
+}
+
+const CHAIN_ID_ESPERADO = 1337n;
+
+function rotuloParaHash(rotulo) {
+  return ethers.keccak256(ethers.toUtf8Bytes(rotulo.trim()));
+}
+
+function logEvento(texto) {
+  const el = document.getElementById("log");
+  if (el.textContent.startsWith("Nenhum evento")) el.textContent = "";
+  const linha = `[${new Date().toLocaleTimeString()}] ${texto}\n`;
+  el.textContent = linha + el.textContent;
+}
+
+function mostrar(id, texto) {
+  const el = document.getElementById(id);
+  el.style.display = "block";
+  el.textContent = texto;
+}
+
+function decodificarErro(err, contratoRef) {
+  const data = err?.data ?? err?.info?.error?.data;
+  if (data && contratoRef) {
+    try {
+      const decoded = contratoRef.interface.parseError(data);
+      return `${decoded.name}(${decoded.args.map(String).join(", ")})`;
+    } catch (_) {
+      // segue para a mensagem padrão
+    }
+  }
+  return err?.reason || err?.shortMessage || err?.message || String(err);
+}
+
+async function trocarParaRedeLocal() {
+  const CHAIN_ID_HEX = "0x539"; // 1337 em hexadecimal
+  try {
+    await window.ethereum.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: CHAIN_ID_HEX }],
+    });
+  } catch (switchError) {
+    // 4902 = essa rede ainda não está cadastrada nesse MetaMask; cadastra e tenta de novo.
+    if (switchError.code === 4902) {
+      await window.ethereum.request({
+        method: "wallet_addEthereumChain",
+        params: [
+          {
+            chainId: CHAIN_ID_HEX,
+            chainName: "Hardhat Local",
+            rpcUrls: ["http://127.0.0.1:8545"],
+            nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+          },
+        ],
+      });
+    } else {
+      throw switchError;
+    }
+  }
+}
+
+document.getElementById("btnConectar").onclick = async () => {
+  if (!window.ethereum) {
+    alert("MetaMask não encontrado. Instale a extensão para continuar.");
+    return;
+  }
+  provider = new ethers.BrowserProvider(window.ethereum);
+  await provider.send("eth_requestAccounts", []);
+
+  const rede = await provider.getNetwork();
+  const el = document.getElementById("contaAtual");
+
+  if (rede.chainId !== CHAIN_ID_ESPERADO) {
+    el.style.display = "block";
+    el.style.background = "#fff4e5";
+    el.textContent = `Rede atual (chainId ${rede.chainId}) é diferente da esperada (${CHAIN_ID_ESPERADO}).\nPedindo ao MetaMask para trocar — aprove o popup...`;
+    try {
+      await trocarParaRedeLocal();
+      // Se o MetaMask trocar de verdade, o evento "chainChanged" (listener
+      // registrado mais acima) recarrega a página sozinho. Não precisamos
+      // continuar daqui — a próxima carga já vem com a rede certa.
+      return;
+    } catch (err) {
+      el.style.background = "#f7d9d9";
+      el.textContent =
+        `Não foi possível trocar automaticamente de rede: ${err?.message || err}\n\n` +
+        `Abra o MetaMask manualmente (a partir desta aba) e selecione a rede com chainId 1337.`;
+      return;
+    }
+  }
+
+  signer = await provider.getSigner();
+  el.style.display = "block";
+  el.style.background = "";
+  el.textContent = `Conectado: ${await signer.getAddress()}\nRede: chainId ${rede.chainId}`;
+};
+
+document.getElementById("btnCarregar").onclick = async () => {
+  const endereco = document.getElementById("inputEndereco").value.trim();
+  if (!ethers.isAddress(endereco)) {
+    alert("Endereço de contrato inválido.");
+    return;
+  }
+  if (!signer) {
+    alert("Conecte o MetaMask primeiro.");
+    return;
+  }
+
+  // Se "Carregar contrato" for clicado mais de uma vez (ex.: trocou o endereço,
+  // ou só clicou de novo por engano), os ouvintes de evento do contrato anterior
+  // ficam presos ao provider e continuam disparando. Removemos antes de recriar,
+  // para nunca duplicar entradas no log.
+  if (contrato) {
+    await contrato.removeAllListeners();
+  }
+
+  contrato = new ethers.Contract(endereco, ABI, signer);
+
+  // Assina os três eventos do contrato para o log em tempo real.
+  contrato.on("DocumentoRegistrado", (documentId, documentHash, emissor, expiraEm) => {
+    logEvento(`DocumentoRegistrado documentId=${documentId} emissor=${emissor}`);
+  });
+  contrato.on("DocumentoRevogado", (documentId, revogadoPor) => {
+    logEvento(`DocumentoRevogado documentId=${documentId} revogadoPor=${revogadoPor}`);
+  });
+  contrato.on("DocumentoSubstituido", (idAntigo, idNovo) => {
+    logEvento(`DocumentoSubstituido antigo=${idAntigo} novo=${idNovo}`);
+  });
+
+  alert("Contrato carregado. Já pode registrar/consultar/revogar.");
+};
+
+document.getElementById("btnRegistrar").onclick = async () => {
+  if (!contrato) return alert("Carregue o contrato primeiro.");
+  const rotulo = document.getElementById("regRotulo").value;
+  const conteudo = document.getElementById("regConteudo").value;
+  const expiraStr = document.getElementById("regExpira").value;
+  if (!rotulo || !conteudo) return alert("Preencha rótulo e conteúdo.");
+
+  const documentId = rotuloParaHash(rotulo);
+  const documentHash = rotuloParaHash(conteudo);
+  const expiraEm = expiraStr ? Math.floor(new Date(expiraStr).getTime() / 1000) : 0;
+
+  try {
+    const tx = await contrato.registrarDocumento(documentId, documentHash, expiraEm);
+    mostrar("resultadoRegistrar", `Transação enviada: ${tx.hash}\nAguardando confirmação...`);
+    const receipt = await tx.wait();
+    mostrar(
+      "resultadoRegistrar",
+      `Confirmado no bloco ${receipt.blockNumber}\ntx: ${receipt.hash}\ndocumentId: ${documentId}`
+    );
+  } catch (err) {
+    mostrar("resultadoRegistrar", "Erro: " + decodificarErro(err, contrato));
+  }
+};
+
+async function consultar(retornarCompleto) {
+  if (!contrato) return alert("Carregue o contrato primeiro.");
+  const rotulo = document.getElementById("consRotulo").value;
+  if (!rotulo) return alert("Preencha o rótulo do documento.");
+  const documentId = rotuloParaHash(rotulo);
+
+  try {
+    if (retornarCompleto) {
+      const r = await contrato.obterRegistro(documentId);
+      mostrar(
+        "resultadoConsulta",
+        `documentId: ${documentId}\n` +
+        `documentHash: ${r.documentHash}\n` +
+        `emissor: ${r.emissor}\n` +
+        `emitidoEm: ${new Date(Number(r.emitidoEm) * 1000).toLocaleString()}\n` +
+        `expiraEm: ${r.expiraEm == 0n ? "sem expiração" : new Date(Number(r.expiraEm) * 1000).toLocaleString()}\n` +
+        `status: ${STATUS_NOMES[Number(r.status)]}\n` +
+        `substituidoPor: ${r.substituidoPor === ethers.ZeroHash ? "-" : r.substituidoPor}`
+      );
+    } else {
+      const status = await contrato.consultarStatus(documentId);
+      mostrar("resultadoConsulta", `documentId: ${documentId}\nstatus: ${STATUS_NOMES[Number(status)]}`);
+    }
+  } catch (err) {
+    mostrar("resultadoConsulta", "Erro: " + decodificarErro(err, contrato));
+  }
+}
+
+document.getElementById("btnConsultar").onclick = () => consultar(false);
+document.getElementById("btnRegistroCompleto").onclick = () => consultar(true);
+
+document.getElementById("btnRevogar").onclick = async () => {
+  if (!contrato) return alert("Carregue o contrato primeiro.");
+  const rotulo = document.getElementById("revRotulo").value;
+  if (!rotulo) return alert("Preencha o rótulo do documento.");
+  const documentId = rotuloParaHash(rotulo);
+
+  try {
+    const tx = await contrato.revogarDocumento(documentId);
+    mostrar("resultadoRevogar", `Transação enviada: ${tx.hash}\nAguardando confirmação...`);
+    const receipt = await tx.wait();
+    mostrar("resultadoRevogar", `Confirmado no bloco ${receipt.blockNumber}\ntx: ${receipt.hash}`);
+  } catch (err) {
+    mostrar("resultadoRevogar", "Erro: " + decodificarErro(err, contrato));
+  }
+};
+</script>
+</body>
+</html>
