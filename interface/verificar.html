@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<title>VerificaJus Sigilo — Verificação pública</title>
+<script src="https://unpkg.com/ethers@6/dist/ethers.umd.min.js" type="application/javascript"></script>
+<style>
+  :root { color-scheme: light; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    max-width: 720px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+    color: #1c1c1c;
+    background: #fafafa;
+  }
+  h1 { font-size: 1.3rem; margin-bottom: 0; }
+  p.subtitulo { color: #555; font-size: 0.9rem; margin-top: 0.3rem; }
+  section {
+    background: white;
+    border: 1px solid #e2e2e2;
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+  section h2 { font-size: 1rem; margin-top: 0; }
+  section.nivel2 { background: #fafcff; }
+  label { display: block; font-size: 0.85rem; margin: 0.6rem 0 0.2rem; color: #444; }
+  input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 0.9rem;
+  }
+  button {
+    margin-top: 0.8rem;
+    padding: 0.55rem 1.1rem;
+    border: none;
+    border-radius: 6px;
+    background: #1f2933;
+    color: white;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+  button.secundario { background: #52606d; }
+  button:disabled { background: #b0b7bd; cursor: not-allowed; }
+  .resultado {
+    margin-top: 0.8rem;
+    padding: 0.7rem;
+    background: #f4f6f7;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .status-grande {
+    font-size: 1.4rem;
+    font-weight: 700;
+    padding: 0.9rem;
+    border-radius: 8px;
+    text-align: center;
+    margin-top: 0.8rem;
+  }
+  .status-Valido { background: #d7f5df; color: #1a7a3d; }
+  .status-Expirado { background: #f5e9d7; color: #8a5b1a; }
+  .status-Revogado { background: #f7d9d9; color: #a12b2b; }
+  .status-Substituido { background: #dde3f7; color: #2b3ea1; }
+  .status-desconhecido { background: #eee; color: #555; }
+  #historico { max-height: 200px; overflow-y: auto; font-size: 0.8rem; }
+  .aviso {
+    background: #fff4e5;
+    border: 1px solid #f0c36d;
+    padding: 0.7rem 1rem;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    margin: 1rem 0 1.5rem;
+  }
+</style>
+</head>
+<body>
+
+<h1>VerificaJus Sigilo — Verificação pública</h1>
+<p class="subtitulo">Nível 1 é aberto a qualquer pessoa, sem carteira. Nível 2 exige conectar
+uma carteira e deixa um registro público de quem confirmou a verificação.</p>
+
+<div class="aviso">
+  Ferramenta de <strong>desenvolvimento/teste</strong>. Numa versão final, o link/QR já
+  viria com endereço do contrato e identificador preenchidos — aqui você configura à mão.
+</div>
+
+<section>
+  <h2>Configuração</h2>
+  <label for="inputRpc">RPC da rede</label>
+  <input id="inputRpc" placeholder="http://127.0.0.1:8545" />
+  <label for="inputEndereco">Endereço do contrato</label>
+  <input id="inputEndereco" placeholder="0x..." />
+</section>
+
+<section>
+  <h2>Nível 1 — Consulta pública (sem carteira)</h2>
+  <label for="inputId">Identificador do documento (cole o hash, ou digite o rótulo interno usado no registro)</label>
+  <input id="inputId" placeholder="0x... ou alvara-viagem-0001" />
+  <button id="btnConsultarPublico">Consultar</button>
+  <div id="statusGrande" class="status-grande" style="display:none;"></div>
+  <div id="resultadoPublico" class="resultado" style="display:none;"></div>
+
+  <label style="margin-top:1rem;">Histórico de verificações (quem já confirmou ter visto os detalhes)</label>
+  <div id="historico" class="resultado">Consulte um documento acima para ver o histórico.</div>
+</section>
+
+<section class="nivel2">
+  <h2>Nível 2 — Mais detalhes (com carteira)</h2>
+  <button id="btnConectar">Conectar carteira</button>
+  <div id="contaAtual" class="resultado" style="display:none;"></div>
+  <div id="resultadoDetalhado" class="resultado" style="display:none;"></div>
+  <button id="btnCarimbar" class="secundario" style="display:none;">Marcar como verificado por mim</button>
+  <div id="resultadoCarimbar" class="resultado" style="display:none;"></div>
+</section>
+
+<script>
+const ABI = [
+  "function vara() view returns (address)",
+  "function consultarStatus(bytes32 documentId) view returns (uint8)",
+  "function obterRegistro(bytes32 documentId) view returns (bytes32 documentHash, address emissor, uint64 emitidoEm, uint64 expiraEm, uint8 status, bytes32 substituidoPor)",
+  "function confirmarVerificacao(bytes32 documentId)",
+  "event DocumentoVerificadoPor(bytes32 indexed documentId, address indexed verificador, uint64 verificadoEm)",
+  "error DocumentIdInvalido()",
+  "error DocumentHashInvalido()",
+  "error EnderecoInvalido()",
+  "error DocumentoJaRegistrado(bytes32 documentId)",
+  "error DocumentoInexistente(bytes32 documentId)",
+  "error DocumentoNaoValido(bytes32 documentId, uint8 statusAtual)"
+];
+
+const STATUS_NOMES = ["Valido", "Expirado", "Revogado", "Substituido"];
+const CHAIN_ID_ESPERADO = 1337n;
+
+let providerLeitura, providerCarteira, signer, contratoLeitura, contratoCarteira;
+let documentIdAtual = null;
+
+// Preenche os campos a partir da URL, ex.:
+// verificar.html?rpc=http://127.0.0.1:8545&address=0x...&id=0x...
+// É exatamente esse padrão de URL que um QR Code real apontaria.
+const params = new URLSearchParams(window.location.search);
+document.getElementById("inputRpc").value = params.get("rpc") || "http://127.0.0.1:8545";
+document.getElementById("inputEndereco").value = params.get("address") || "";
+document.getElementById("inputId").value = params.get("id") || "";
+
+if (window.ethereum) {
+  window.ethereum.on("accountsChanged", () => window.location.reload());
+  window.ethereum.on("chainChanged", () => window.location.reload());
+}
+
+function resolverDocumentId(valor) {
+  const v = valor.trim();
+  if (/^0x[0-9a-fA-F]{64}$/.test(v)) return v; // já é um documentId em bytes32
+  return ethers.keccak256(ethers.toUtf8Bytes(v)); // trata como rótulo interno
+}
+
+function mostrar(id, texto) {
+  const el = document.getElementById(id);
+  el.style.display = "block";
+  el.textContent = texto;
+}
+
+function decodificarErro(err, contratoRef) {
+  const data = err?.data ?? err?.info?.error?.data;
+  if (data && contratoRef) {
+    try {
+      const decoded = contratoRef.interface.parseError(data);
+      return `${decoded.name}(${decoded.args.map(String).join(", ")})`;
+    } catch (_) {}
+  }
+  return err?.reason || err?.shortMessage || err?.message || String(err);
+}
+
+async function carregarHistorico(contratoRef, providerRef, documentId) {
+  const el = document.getElementById("historico");
+  try {
+    // Nota técnica: contrato.queryFilter() e provider.getLogs() do ethers v6 se
+    // mostraram não confiáveis aqui quando o provider é um JsonRpcProvider puro
+    // (sem passar por um Signer) — retornavam 0 resultados mesmo com eventos
+    // existentes e o filtro (topics) correto. Confirmado isolando a causa: uma
+    // chamada eth_getLogs crua, com os MESMOS topics, funciona perfeitamente.
+    // Por isso usamos provider.send("eth_getLogs", ...) direto + parseLog manual,
+    // em vez do atalho de mais alto nível.
+    const filtro = contratoRef.filters.DocumentoVerificadoPor(documentId);
+    const topics = await filtro.getTopicFilter();
+    const enderecoContrato = await contratoRef.getAddress();
+
+    const logsCrus = await providerRef.send("eth_getLogs", [
+      { address: enderecoContrato, fromBlock: "0x0", toBlock: "latest", topics },
+    ]);
+    const eventos = logsCrus.map((log) => contratoRef.interface.parseLog(log));
+
+    if (eventos.length === 0) {
+      el.textContent = "Nenhuma verificação confirmada ainda para este documento.";
+      return;
+    }
+    el.textContent = eventos
+      .map((ev) => {
+        const quando = new Date(Number(ev.args.verificadoEm) * 1000).toLocaleString();
+        return `${quando} — verificado por ${ev.args.verificador}`;
+      })
+      .join("\n");
+  } catch (err) {
+    el.textContent = "Não foi possível carregar o histórico: " + decodificarErro(err, contratoRef);
+  }
+}
+
+document.getElementById("btnConsultarPublico").onclick = async () => {
+  const rpc = document.getElementById("inputRpc").value.trim();
+  const endereco = document.getElementById("inputEndereco").value.trim();
+  const idBruto = document.getElementById("inputId").value.trim();
+
+  if (!ethers.isAddress(endereco)) return alert("Endereço de contrato inválido.");
+  if (!idBruto) return alert("Preencha o identificador do documento.");
+
+  documentIdAtual = resolverDocumentId(idBruto);
+
+  try {
+    providerLeitura = new ethers.JsonRpcProvider(rpc);
+    contratoLeitura = new ethers.Contract(endereco, ABI, providerLeitura);
+
+    const status = await contratoLeitura.consultarStatus(documentIdAtual);
+    const nome = STATUS_NOMES[Number(status)] || "desconhecido";
+
+    const badge = document.getElementById("statusGrande");
+    badge.style.display = "block";
+    badge.className = "status-grande status-" + nome;
+    badge.textContent = nome === "Valido" ? "✓ VÁLIDO" : nome.toUpperCase();
+
+    mostrar("resultadoPublico", `documentId: ${documentIdAtual}\nstatus: ${nome}`);
+
+    await carregarHistorico(contratoLeitura, providerLeitura, documentIdAtual);
+  } catch (err) {
+    document.getElementById("statusGrande").style.display = "none";
+    mostrar("resultadoPublico", "Erro: " + decodificarErro(err, contratoLeitura));
+  }
+};
+
+document.getElementById("btnConectar").onclick = async () => {
+  if (!window.ethereum) return alert("MetaMask não encontrado.");
+  if (!documentIdAtual) return alert("Consulte um documento no Nível 1 primeiro.");
+
+  providerCarteira = new ethers.BrowserProvider(window.ethereum);
+  await providerCarteira.send("eth_requestAccounts", []);
+
+  const rede = await providerCarteira.getNetwork();
+  if (rede.chainId !== CHAIN_ID_ESPERADO) {
+    alert(`Rede incorreta (chainId ${rede.chainId}). Troque para a rede com chainId 1337 no MetaMask.`);
+    return;
+  }
+
+  signer = await providerCarteira.getSigner();
+  const endereco = document.getElementById("inputEndereco").value.trim();
+  contratoCarteira = new ethers.Contract(endereco, ABI, signer);
+
+  const contaConectada = await signer.getAddress();
+  mostrar("contaAtual", `Conectado: ${contaConectada}`);
+
+  try {
+    const r = await contratoCarteira.obterRegistro(documentIdAtual);
+    mostrar(
+      "resultadoDetalhado",
+      `documentHash: ${r.documentHash}\n` +
+      `emissor: ${r.emissor}\n` +
+      `emitidoEm: ${new Date(Number(r.emitidoEm) * 1000).toLocaleString()}\n` +
+      `expiraEm: ${r.expiraEm == 0n ? "sem expiração" : new Date(Number(r.expiraEm) * 1000).toLocaleString()}\n` +
+      `substituidoPor: ${r.substituidoPor === ethers.ZeroHash ? "-" : r.substituidoPor}`
+    );
+    document.getElementById("btnCarimbar").style.display = "inline-block";
+  } catch (err) {
+    mostrar("resultadoDetalhado", "Erro ao buscar detalhes: " + decodificarErro(err, contratoCarteira));
+  }
+};
+
+document.getElementById("btnCarimbar").onclick = async () => {
+  if (!contratoCarteira || !documentIdAtual) return;
+
+  try {
+    const tx = await contratoCarteira.confirmarVerificacao(documentIdAtual);
+    mostrar("resultadoCarimbar", `Transação enviada: ${tx.hash}\nAguardando confirmação...`);
+    const receipt = await tx.wait();
+    mostrar("resultadoCarimbar", `Confirmado no bloco ${receipt.blockNumber}.\nSeu endereço agora consta no histórico de verificações abaixo.`);
+
+    // Atualiza o histórico público (nível 1) com a nova confirmação.
+    await carregarHistorico(contratoLeitura, providerLeitura, documentIdAtual);
+  } catch (err) {
+    mostrar("resultadoCarimbar", "Erro: " + decodificarErro(err, contratoCarteira));
+  }
+};
+</script>
+</body>
+</html>

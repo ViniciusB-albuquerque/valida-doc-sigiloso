@@ -20,4 +20,7 @@ npx hardhat run scripts/deploy.js --network localhost
 
 # Terminal 3
 npx serve interface
+
+# ciclo doc completo
+npx hardhat run scripts/demo.js --network localhost
 ```

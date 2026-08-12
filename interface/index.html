@@ -81,10 +81,11 @@
 <h1>VerificaJus Sigilo — Interface mínima</h1>
 <div class="aviso">
   Ferramenta de <strong>desenvolvimento/teste</strong>, não é a interface final do projeto.
-  Ainda não implementa os 3 perfis de acesso (Polícia Federal, companhia aérea, Conselho
-  Tutelar) nem o QR Code — isso é responsabilidade do backend com RBAC, que ainda não existe.
-  Aqui você fala <em>diretamente</em> com o contrato pelo MetaMask, como se fosse o
-  backend da Vara ou um verificador manual.
+  A conta conectada já é reconhecida (Vara vs. verificador) e o hash do documento já é
+  calculado a partir de um PDF real — mas ainda não implementa os 3 perfis de acesso
+  diferenciado (Polícia Federal, companhia aérea, Conselho Tutelar), nem QR Code, nem
+  filtragem de dados sensíveis por perfil — isso é responsabilidade do backend com RBAC,
+  que ainda não existe. Aqui você fala <em>diretamente</em> com o contrato pelo MetaMask.
 </div>
 
 <section>
@@ -95,14 +96,16 @@
   <label for="inputEndereco">Endereço do contrato (copiado do deploy)</label>
   <input id="inputEndereco" placeholder="0x..." />
   <button id="btnCarregar" class="secundario">Carregar contrato</button>
+  <div id="papelUsuario" class="resultado" style="display:none;"></div>
 </section>
 
-<section>
-  <h2>2. Registrar documento (só funciona se você for a Vara)</h2>
-  <label for="regRotulo">Rótulo do documento (ex.: alvara-viagem-0001)</label>
+<section id="secRegistrar">
+  <h2>2. Registrar documento</h2>
+  <label for="regRotulo">Identificador interno do documento (ex.: alvara-viagem-0001)</label>
   <input id="regRotulo" placeholder="alvara-viagem-0001" />
-  <label for="regConteudo">Rótulo do "conteúdo" (simula o hash que o backend calcularia do PDF/JSON real)</label>
-  <input id="regConteudo" placeholder="conteudo-completo-do-alvara-0001" />
+  <label for="regArquivo">Documento (PDF) — o hash é calculado a partir do conteúdo real do arquivo, no seu navegador</label>
+  <input id="regArquivo" type="file" accept="application/pdf" />
+  <div id="regHashPreview" class="resultado" style="display:none;"></div>
   <label for="regExpira">Expira em (opcional — deixe vazio para sem expiração)</label>
   <input id="regExpira" type="datetime-local" />
   <button id="btnRegistrar">Registrar</button>
@@ -111,16 +114,18 @@
 
 <section>
   <h2>3. Consultar documento</h2>
-  <label for="consRotulo">Rótulo do documento</label>
+  <label for="consRotulo">Identificador interno do documento</label>
   <input id="consRotulo" placeholder="alvara-viagem-0001" />
+  <label for="consArquivo">(Opcional) Reenviar o mesmo PDF para conferir integridade</label>
+  <input id="consArquivo" type="file" accept="application/pdf" />
   <button id="btnConsultar">Consultar status</button>
   <button id="btnRegistroCompleto" class="secundario">Ver registro completo</button>
   <div id="resultadoConsulta" class="resultado" style="display:none;"></div>
 </section>
 
-<section>
-  <h2>4. Revogar documento (só funciona se você for a Vara)</h2>
-  <label for="revRotulo">Rótulo do documento</label>
+<section id="secRevogar">
+  <h2>4. Revogar documento</h2>
+  <label for="revRotulo">Identificador interno do documento</label>
   <input id="revRotulo" placeholder="alvara-viagem-0001" />
   <button id="btnRevogar">Revogar</button>
   <div id="resultadoRevogar" class="resultado" style="display:none;"></div>
@@ -157,6 +162,7 @@ const ABI = [
 const STATUS_NOMES = ["Valido", "Expirado", "Revogado", "Substituido"];
 
 let provider, signer, contrato;
+let isVara = false; // preenchido depois de carregar o contrato, comparando com vara()
 
 // Sem isso, trocar de conta/rede dentro do MetaMask não atualiza a página —
 // era exatamente o problema que te confundiu (ficava conectado com a conta/rede
@@ -171,6 +177,37 @@ const CHAIN_ID_ESPERADO = 1337n;
 
 function rotuloParaHash(rotulo) {
   return ethers.keccak256(ethers.toUtf8Bytes(rotulo.trim()));
+}
+
+// Lê o arquivo de verdade (ex.: o PDF do alvará) e calcula o keccak256 do
+// conteúdo real — isso é o que substitui o "rótulo simulado" da versão
+// anterior. O cálculo acontece inteiramente no navegador; o arquivo em si
+// nunca é enviado a lugar nenhum, só o hash resultante vai para o contrato.
+async function hashArquivo(file) {
+  const buffer = await file.arrayBuffer();
+  return ethers.keccak256(new Uint8Array(buffer));
+}
+
+// Atualiza a seção 1 (papel do usuário) e mostra/esconde as ações restritas
+// à vara — isto é o "reconhecimento de conta" que faz o papel de autenticação
+// nesta etapa (ver docs/01-arquitetura.md, seção 3).
+function atualizarPapelUsuario(enderecoConectado, enderecoVara) {
+  isVara = enderecoConectado.toLowerCase() === enderecoVara.toLowerCase();
+
+  const el = document.getElementById("papelUsuario");
+  el.style.display = "block";
+  el.textContent = isVara
+    ? `Você é a Vara (${enderecoConectado}) — pode registrar e revogar documentos.`
+    : `Você está conectado como verificador (${enderecoConectado}) — só pode consultar. ` +
+      `A Vara deste contrato é ${enderecoVara}.`;
+  el.style.background = isVara ? "" : "#f4f6f7";
+
+  const secRegistrar = document.getElementById("secRegistrar");
+  const secRevogar = document.getElementById("secRevogar");
+  for (const sec of [secRegistrar, secRevogar]) {
+    sec.style.opacity = isVara ? "1" : "0.5";
+    sec.querySelectorAll("input, button").forEach((el) => (el.disabled = !isVara));
+  }
 }
 
 function logEvento(texto) {
@@ -294,18 +331,40 @@ document.getElementById("btnCarregar").onclick = async () => {
     logEvento(`DocumentoSubstituido antigo=${idAntigo} novo=${idNovo}`);
   });
 
+  // "Autenticação" desta etapa: pergunta ao próprio contrato quem é a vara,
+  // compara com a conta conectada, e ajusta a interface de acordo — em vez
+  // de um login separado, a identidade é a mesma que já protege as funções
+  // on-chain (onlyVara).
+  const enderecoVara = await contrato.vara();
+  const enderecoConectado = await signer.getAddress();
+  atualizarPapelUsuario(enderecoConectado, enderecoVara);
+
   alert("Contrato carregado. Já pode registrar/consultar/revogar.");
 };
+
+// Mostra o hash calculado assim que um arquivo é escolhido, antes mesmo de
+// clicar em "Registrar" — dá pra conferir visualmente o que vai on-chain.
+document.getElementById("regArquivo").addEventListener("change", async (ev) => {
+  const file = ev.target.files[0];
+  const el = document.getElementById("regHashPreview");
+  if (!file) {
+    el.style.display = "none";
+    return;
+  }
+  const hash = await hashArquivo(file);
+  el.style.display = "block";
+  el.textContent = `Arquivo: ${file.name} (${file.size} bytes)\ndocumentHash calculado: ${hash}`;
+});
 
 document.getElementById("btnRegistrar").onclick = async () => {
   if (!contrato) return alert("Carregue o contrato primeiro.");
   const rotulo = document.getElementById("regRotulo").value;
-  const conteudo = document.getElementById("regConteudo").value;
+  const arquivo = document.getElementById("regArquivo").files[0];
   const expiraStr = document.getElementById("regExpira").value;
-  if (!rotulo || !conteudo) return alert("Preencha rótulo e conteúdo.");
+  if (!rotulo || !arquivo) return alert("Preencha o identificador e escolha o arquivo do documento.");
 
   const documentId = rotuloParaHash(rotulo);
-  const documentHash = rotuloParaHash(conteudo);
+  const documentHash = await hashArquivo(arquivo);
   const expiraEm = expiraStr ? Math.floor(new Date(expiraStr).getTime() / 1000) : 0;
 
   try {
@@ -330,6 +389,21 @@ async function consultar(retornarCompleto) {
   try {
     if (retornarCompleto) {
       const r = await contrato.obterRegistro(documentId);
+
+      let linhaIntegridade = "";
+      const arquivo = document.getElementById("consArquivo").files[0];
+      if (arquivo) {
+        const hashReenviado = await hashArquivo(arquivo);
+        const confere = hashReenviado.toLowerCase() === r.documentHash.toLowerCase();
+        linhaIntegridade =
+          `\n\nArquivo reenviado: ${arquivo.name}\n` +
+          `Hash calculado agora:  ${hashReenviado}\n` +
+          `Hash gravado on-chain: ${r.documentHash}\n` +
+          (confere
+            ? "Resultado: ÍNTEGRO — o arquivo é exatamente o que foi registrado."
+            : "Resultado: NÃO CONFERE — este arquivo NÃO é o que foi registrado (adulterado ou é outro documento).");
+      }
+
       mostrar(
         "resultadoConsulta",
         `documentId: ${documentId}\n` +
@@ -338,7 +412,8 @@ async function consultar(retornarCompleto) {
         `emitidoEm: ${new Date(Number(r.emitidoEm) * 1000).toLocaleString()}\n` +
         `expiraEm: ${r.expiraEm == 0n ? "sem expiração" : new Date(Number(r.expiraEm) * 1000).toLocaleString()}\n` +
         `status: ${STATUS_NOMES[Number(r.status)]}\n` +
-        `substituidoPor: ${r.substituidoPor === ethers.ZeroHash ? "-" : r.substituidoPor}`
+        `substituidoPor: ${r.substituidoPor === ethers.ZeroHash ? "-" : r.substituidoPor}` +
+        linhaIntegridade
       );
     } else {
       const status = await contrato.consultarStatus(documentId);
