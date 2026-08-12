@@ -23,4 +23,8 @@ npx serve interface
 
 # ciclo doc completo
 npx hardhat run scripts/demo.js --network localhost
+<<<<<<< HEAD
 ```
+=======
+```
+>>>>>>> a3b7b311a4a88fe504942c8694cdc8d2cd4266de
