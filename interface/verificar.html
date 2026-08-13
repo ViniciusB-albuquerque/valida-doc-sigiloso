@@ -77,13 +77,23 @@
     font-size: 0.82rem;
     margin: 1rem 0 1.5rem;
   }
+  .selo-nao-repudio {
+    background: #eaf7ee;
+    border: 1px solid #a9dcb8;
+    padding: 0.6rem 0.8rem;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    color: #1a7a3d;
+    margin-top: 0.6rem;
+  }
 </style>
 </head>
 <body>
 
 <h1>VerificaJus Sigilo — Verificação pública</h1>
-<p class="subtitulo">Nível 1 é aberto a qualquer pessoa, sem carteira. Nível 2 exige conectar
-uma carteira e deixa um registro público de quem confirmou a verificação.</p>
+<p class="subtitulo">Nível 1 é aberto a qualquer pessoa, sem carteira. Nível 2 exige carteira
+cadastrada e assinatura — o próprio acesso já fica registrado, de forma não-repudiável, como
+parte do fluxo (não é um botão à parte).</p>
 
 <div class="aviso">
   Ferramenta de <strong>desenvolvimento/teste</strong>. Numa versão final, o link/QR já
@@ -96,6 +106,8 @@ uma carteira e deixa um registro público de quem confirmou a verificação.</p>
   <input id="inputRpc" placeholder="http://127.0.0.1:8545" />
   <label for="inputEndereco">Endereço do contrato</label>
   <input id="inputEndereco" placeholder="0x..." />
+  <label for="inputBackend">URL do backend</label>
+  <input id="inputBackend" placeholder="http://localhost:3001" />
 </section>
 
 <section>
@@ -111,42 +123,38 @@ uma carteira e deixa um registro público de quem confirmou a verificação.</p>
 </section>
 
 <section class="nivel2">
-  <h2>Nível 2 — Mais detalhes (com carteira)</h2>
+  <h2>Nível 2 — Mais detalhes (com carteira cadastrada)</h2>
   <button id="btnConectar">Conectar carteira</button>
   <div id="contaAtual" class="resultado" style="display:none;"></div>
+
+  <button id="btnVerDetalhes" class="secundario" style="display:none;">Ver mais informações</button>
   <div id="resultadoDetalhado" class="resultado" style="display:none;"></div>
-  <button id="btnCarimbar" class="secundario" style="display:none;">Marcar como verificado por mim</button>
-  <div id="resultadoCarimbar" class="resultado" style="display:none;"></div>
+  <div id="seloNaoRepudio" class="selo-nao-repudio" style="display:none;"></div>
 </section>
 
 <script>
+// ABI mínima só para o Nível 1 (leitura pública, sem carteira). O Nível 2
+// não fala mais com o contrato diretamente — passa pelo backend (ver
+// btnVerDetalhes abaixo), que é quem tem autorização (backendAutorizado)
+// para chamar registrarAcesso.
 const ABI = [
-  "function vara() view returns (address)",
   "function consultarStatus(bytes32 documentId) view returns (uint8)",
-  "function obterRegistro(bytes32 documentId) view returns (bytes32 documentHash, address emissor, uint64 emitidoEm, uint64 expiraEm, uint8 status, bytes32 substituidoPor)",
-  "function confirmarVerificacao(bytes32 documentId)",
-  "event DocumentoVerificadoPor(bytes32 indexed documentId, address indexed verificador, uint64 verificadoEm)",
-  "error DocumentIdInvalido()",
-  "error DocumentHashInvalido()",
-  "error EnderecoInvalido()",
-  "error DocumentoJaRegistrado(bytes32 documentId)",
-  "error DocumentoInexistente(bytes32 documentId)",
-  "error DocumentoNaoValido(bytes32 documentId, uint8 statusAtual)"
+  "event AcessoRegistrado(bytes32 indexed documentId, address indexed verificador, bytes32 assinaturaHash, uint64 quando)",
 ];
 
 const STATUS_NOMES = ["Valido", "Expirado", "Revogado", "Substituido"];
 const CHAIN_ID_ESPERADO = 1337n;
 
-let providerLeitura, providerCarteira, signer, contratoLeitura, contratoCarteira;
+let providerLeitura, providerCarteira, signer, contratoLeitura;
 let documentIdAtual = null;
 
 // Preenche os campos a partir da URL, ex.:
-// verificar.html?rpc=http://127.0.0.1:8545&address=0x...&id=0x...
-// É exatamente esse padrão de URL que um QR Code real apontaria.
+// verificar.html?rpc=http://127.0.0.1:8545&address=0x...&id=0x...&backend=http://localhost:3001
 const params = new URLSearchParams(window.location.search);
 document.getElementById("inputRpc").value = params.get("rpc") || "http://127.0.0.1:8545";
 document.getElementById("inputEndereco").value = params.get("address") || "";
 document.getElementById("inputId").value = params.get("id") || "";
+document.getElementById("inputBackend").value = params.get("backend") || "http://localhost:3001";
 
 if (window.ethereum) {
   window.ethereum.on("accountsChanged", () => window.location.reload());
@@ -176,43 +184,33 @@ function decodificarErro(err, contratoRef) {
   return err?.reason || err?.shortMessage || err?.message || String(err);
 }
 
-async function carregarHistorico(contratoRef, providerRef, documentId) {
+async function carregarHistorico(backendUrl, documentId) {
   const el = document.getElementById("historico");
   try {
-    // Nota técnica: contrato.queryFilter() e provider.getLogs() do ethers v6 se
-    // mostraram não confiáveis aqui quando o provider é um JsonRpcProvider puro
-    // (sem passar por um Signer) — retornavam 0 resultados mesmo com eventos
-    // existentes e o filtro (topics) correto. Confirmado isolando a causa: uma
-    // chamada eth_getLogs crua, com os MESMOS topics, funciona perfeitamente.
-    // Por isso usamos provider.send("eth_getLogs", ...) direto + parseLog manual,
-    // em vez do atalho de mais alto nível.
-    const filtro = contratoRef.filters.DocumentoVerificadoPor(documentId);
-    const topics = await filtro.getTopicFilter();
-    const enderecoContrato = await contratoRef.getAddress();
+    const resp = await fetch(`${backendUrl}/api/documentos/${documentId}/historico`);
+    const dados = await resp.json();
+    if (!resp.ok) throw new Error(dados.erro || "Erro ao carregar histórico.");
 
-    const logsCrus = await providerRef.send("eth_getLogs", [
-      { address: enderecoContrato, fromBlock: "0x0", toBlock: "latest", topics },
-    ]);
-    const eventos = logsCrus.map((log) => contratoRef.interface.parseLog(log));
-
-    if (eventos.length === 0) {
+    if (dados.historico.length === 0) {
       el.textContent = "Nenhuma verificação confirmada ainda para este documento.";
       return;
     }
-    el.textContent = eventos
-      .map((ev) => {
-        const quando = new Date(Number(ev.args.verificadoEm) * 1000).toLocaleString();
-        return `${quando} — verificado por ${ev.args.verificador}`;
+    el.textContent = dados.historico
+      .map((h) => {
+        const quando = new Date(h.quando).toLocaleString();
+        const quem = h.nome ? `${h.nome} (${h.instituicao})` : h.endereco;
+        return `${quando} — verificado por ${quem}`;
       })
       .join("\n");
   } catch (err) {
-    el.textContent = "Não foi possível carregar o histórico: " + decodificarErro(err, contratoRef);
+    el.textContent = "Não foi possível carregar o histórico: " + err.message;
   }
 }
 
 document.getElementById("btnConsultarPublico").onclick = async () => {
   const rpc = document.getElementById("inputRpc").value.trim();
   const endereco = document.getElementById("inputEndereco").value.trim();
+  const backendUrl = document.getElementById("inputBackend").value.trim().replace(/\/$/, "");
   const idBruto = document.getElementById("inputId").value.trim();
 
   if (!ethers.isAddress(endereco)) return alert("Endereço de contrato inválido.");
@@ -234,7 +232,11 @@ document.getElementById("btnConsultarPublico").onclick = async () => {
 
     mostrar("resultadoPublico", `documentId: ${documentIdAtual}\nstatus: ${nome}`);
 
-    await carregarHistorico(contratoLeitura, providerLeitura, documentIdAtual);
+    await carregarHistorico(backendUrl, documentIdAtual);
+
+    // Já que temos um documento carregado, libera o botão do Nível 2
+    // (mas ele só faz algo de fato depois de conectar a carteira).
+    document.getElementById("btnVerDetalhes").style.display = "inline-block";
   } catch (err) {
     document.getElementById("statusGrande").style.display = "none";
     mostrar("resultadoPublico", "Erro: " + decodificarErro(err, contratoLeitura));
@@ -243,7 +245,6 @@ document.getElementById("btnConsultarPublico").onclick = async () => {
 
 document.getElementById("btnConectar").onclick = async () => {
   if (!window.ethereum) return alert("MetaMask não encontrado.");
-  if (!documentIdAtual) return alert("Consulte um documento no Nível 1 primeiro.");
 
   providerCarteira = new ethers.BrowserProvider(window.ethereum);
   await providerCarteira.send("eth_requestAccounts", []);
@@ -255,41 +256,81 @@ document.getElementById("btnConectar").onclick = async () => {
   }
 
   signer = await providerCarteira.getSigner();
-  const endereco = document.getElementById("inputEndereco").value.trim();
-  contratoCarteira = new ethers.Contract(endereco, ABI, signer);
+  mostrar("contaAtual", `Conectado: ${await signer.getAddress()}`);
+};
 
-  const contaConectada = await signer.getAddress();
-  mostrar("contaAtual", `Conectado: ${contaConectada}`);
+// Fluxo do Nível 2, reforçado (Etapa 1 + Task 2.6):
+//   1) pede um desafio ao backend (mensagem com timestamp, gerada pelo servidor)
+//   2) assina essa mensagem com personal_sign (signer.signMessage — sem gas,
+//      sem transação, é só uma assinatura)
+//   3) envia a assinatura ao backend, que confere e SÓ ENTÃO chama
+//      registrarAcesso on-chain, usando a própria chave do backend
+//      (nunca a do visitante)
+// Não existe mais um botão separado de "carimbar" — o próprio ato de ver
+// os detalhes já é o que fica registrado, automaticamente, como parte
+// deste fluxo único.
+document.getElementById("btnVerDetalhes").onclick = async () => {
+  if (!signer) return alert("Conecte sua carteira primeiro.");
+  if (!documentIdAtual) return alert("Consulte um documento no Nível 1 primeiro.");
+
+  const backendUrl = document.getElementById("inputBackend").value.trim().replace(/\/$/, "");
+  const endereco = await signer.getAddress();
+
+  document.getElementById("seloNaoRepudio").style.display = "none";
+  mostrar("resultadoDetalhado", "Pedindo desafio ao backend...");
 
   try {
-    const r = await contratoCarteira.obterRegistro(documentIdAtual);
+    // Passo 1 — desafio
+    const respDesafio = await fetch(
+      `${backendUrl}/api/documentos/${documentIdAtual}/desafio?endereco=${endereco}`
+    );
+    const dadosDesafio = await respDesafio.json();
+    if (!respDesafio.ok) {
+      mostrar("resultadoDetalhado", `Acesso negado: ${dadosDesafio.erro}`);
+      return;
+    }
+
+    // Passo 2 — assina a mensagem exata que o backend gerou (o MetaMask
+    // abre o popup de "assinar mensagem" aqui — sem custo, sem transação).
+    mostrar("resultadoDetalhado", "Aguardando sua assinatura no MetaMask...");
+    const assinatura = await signer.signMessage(dadosDesafio.mensagem);
+
+    // Passo 3 — envia a assinatura; o backend confere e registra o acesso
+    // on-chain automaticamente, como parte desta mesma chamada.
+    mostrar("resultadoDetalhado", "Confirmando acesso...");
+    const respAcesso = await fetch(`${backendUrl}/api/documentos/${documentIdAtual}/acesso`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ endereco, assinatura }),
+    });
+    const dadosAcesso = await respAcesso.json();
+    if (!respAcesso.ok) {
+      mostrar("resultadoDetalhado", `Erro: ${dadosAcesso.erro}`);
+      return;
+    }
+
+    const r = dadosAcesso.registro;
     mostrar(
       "resultadoDetalhado",
       `documentHash: ${r.documentHash}\n` +
-      `emissor: ${r.emissor}\n` +
-      `emitidoEm: ${new Date(Number(r.emitidoEm) * 1000).toLocaleString()}\n` +
-      `expiraEm: ${r.expiraEm == 0n ? "sem expiração" : new Date(Number(r.expiraEm) * 1000).toLocaleString()}\n` +
-      `substituidoPor: ${r.substituidoPor === ethers.ZeroHash ? "-" : r.substituidoPor}`
+      `emissor: ${r.emissor}` + (r.emissorNome ? ` (${r.emissorNome} — ${r.emissorInstituicao})` : "") + `\n` +
+      `emitidoEm: ${new Date(r.emitidoEm * 1000).toLocaleString()}\n` +
+      `expiraEm: ${r.expiraEm === 0 ? "sem expiração" : new Date(r.expiraEm * 1000).toLocaleString()}\n` +
+      `status: ${r.status}\n` +
+      `substituidoPor: ${r.substituidoPor || "-"}`
     );
-    document.getElementById("btnCarimbar").style.display = "inline-block";
+
+    const el = document.getElementById("seloNaoRepudio");
+    el.style.display = "block";
+    el.textContent =
+      `✓ Seu acesso foi registrado de forma não-repudiável.\n` +
+      `tx: ${dadosAcesso.acessoRegistrado.txHash}\n` +
+      `bloco: ${dadosAcesso.acessoRegistrado.blockNumber}`;
+
+    // Atualiza o histórico público (Nível 1) com este novo acesso.
+    await carregarHistorico(backendUrl, documentIdAtual);
   } catch (err) {
-    mostrar("resultadoDetalhado", "Erro ao buscar detalhes: " + decodificarErro(err, contratoCarteira));
-  }
-};
-
-document.getElementById("btnCarimbar").onclick = async () => {
-  if (!contratoCarteira || !documentIdAtual) return;
-
-  try {
-    const tx = await contratoCarteira.confirmarVerificacao(documentIdAtual);
-    mostrar("resultadoCarimbar", `Transação enviada: ${tx.hash}\nAguardando confirmação...`);
-    const receipt = await tx.wait();
-    mostrar("resultadoCarimbar", `Confirmado no bloco ${receipt.blockNumber}.\nSeu endereço agora consta no histórico de verificações abaixo.`);
-
-    // Atualiza o histórico público (nível 1) com a nova confirmação.
-    await carregarHistorico(contratoLeitura, providerLeitura, documentIdAtual);
-  } catch (err) {
-    mostrar("resultadoCarimbar", "Erro: " + decodificarErro(err, contratoCarteira));
+    mostrar("resultadoDetalhado", "Erro: " + (err?.message || String(err)));
   }
 };
 </script>

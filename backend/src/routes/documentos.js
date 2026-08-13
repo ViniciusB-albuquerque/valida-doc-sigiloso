@@ -1,0 +1,130 @@
+const express = require("express");
+const { ethers } = require("ethers");
+
+const blockchain = require("../blockchain");
+const { buscarIdentidade, estaAutorizado } = require("../db");
+const { gerarDesafio, verificarAssinatura } = require("../desafios");
+
+const router = express.Router();
+
+const REGEX_DOCUMENT_ID = /^0x[0-9a-fA-F]{64}$/;
+const REGEX_ENDERECO = /^0x[0-9a-fA-F]{40}$/;
+
+function validarDocumentId(req, res, next) {
+  if (!REGEX_DOCUMENT_ID.test(req.params.documentId)) {
+    return res.status(400).json({ erro: "documentId inválido — precisa ser um bytes32 (0x + 64 hex)." });
+  }
+  next();
+}
+
+// --- Nível 1 (público, sem carteira) ---------------------------------------
+
+router.get("/:documentId/status", validarDocumentId, async (req, res) => {
+  try {
+    const status = await blockchain.consultarStatus(req.params.documentId);
+    res.json({ documentId: req.params.documentId, status });
+  } catch (err) {
+    res.status(404).json({ erro: blockchain.decodificarErro(err) });
+  }
+});
+
+router.get("/:documentId/atual", validarDocumentId, async (req, res) => {
+  try {
+    const documentIdAtual = await blockchain.resolverDocumentoAtual(req.params.documentId);
+    res.json({ documentId: req.params.documentId, documentIdAtual });
+  } catch (err) {
+    res.status(404).json({ erro: blockchain.decodificarErro(err) });
+  }
+});
+
+// Histórico de acessos é público por natureza (o evento em si é público
+// on-chain — ver docs/05-fluxo-e-plano.md, seção 3.2). Enriquecido aqui
+// com nome/instituição de quem já está cadastrado.
+router.get("/:documentId/historico", validarDocumentId, async (req, res) => {
+  try {
+    const eventos = await blockchain.obterHistoricoAcessos(req.params.documentId);
+    const historico = eventos.map((ev) => {
+      const identidade = buscarIdentidade(ev.verificador);
+      return {
+        endereco: ev.verificador,
+        nome: identidade?.nome ?? null,
+        instituicao: identidade?.instituicao ?? null,
+        quando: new Date(ev.quando * 1000).toISOString(),
+      };
+    });
+    res.json({ documentId: req.params.documentId, historico });
+  } catch (err) {
+    res.status(500).json({ erro: blockchain.decodificarErro(err) });
+  }
+});
+
+// --- Nível 2 (com carteira cadastrada) --------------------------------------
+
+// Passo 1 do fluxo de assinatura: pede um desafio para assinar.
+router.get("/:documentId/desafio", validarDocumentId, (req, res) => {
+  const endereco = String(req.query.endereco || "");
+  if (!REGEX_ENDERECO.test(endereco)) {
+    return res.status(400).json({ erro: "Parâmetro 'endereco' ausente ou inválido." });
+  }
+
+  // Camada 1 (gate de identidade): nem gera desafio para quem não está
+  // cadastrado — evita dar qualquer pista de que vale a pena tentar assinar.
+  if (!estaAutorizado(endereco)) {
+    return res.status(403).json({ erro: "Endereço não cadastrado. Procure o administrador do sistema." });
+  }
+
+  const mensagem = gerarDesafio(req.params.documentId, endereco);
+  res.json({ mensagem });
+});
+
+// Passo 2: envia a assinatura, recebe os detalhes do documento se tudo bater.
+router.post("/:documentId/acesso", validarDocumentId, async (req, res) => {
+  const { endereco, assinatura } = req.body || {};
+  if (!REGEX_ENDERECO.test(String(endereco || ""))) {
+    return res.status(400).json({ erro: "Campo 'endereco' ausente ou inválido." });
+  }
+  if (!assinatura) {
+    return res.status(400).json({ erro: "Campo 'assinatura' ausente." });
+  }
+
+  // Camada 1: confere de novo aqui (não só no /desafio) — nunca confiar só
+  // na etapa anterior.
+  if (!estaAutorizado(endereco)) {
+    return res.status(403).json({ erro: "Endereço não cadastrado. Procure o administrador do sistema." });
+  }
+
+  let mensagemAssinada;
+  try {
+    mensagemAssinada = verificarAssinatura(req.params.documentId, endereco, assinatura);
+  } catch (err) {
+    return res.status(401).json({ erro: err.message });
+  }
+
+  try {
+    // Camada 2: só agora, com a assinatura já verificada, o backend chama
+    // registrarAcesso — nunca antes, nunca por conta do próprio verificador.
+    const assinaturaHash = ethers.keccak256(assinatura);
+    const { txHash, blockNumber } = await blockchain.registrarAcesso(
+      req.params.documentId,
+      endereco,
+      assinaturaHash
+    );
+
+    const registro = await blockchain.obterRegistro(req.params.documentId);
+    const identidadeEmissor = buscarIdentidade(registro.emissor);
+
+    res.json({
+      registro: {
+        ...registro,
+        emissorNome: identidadeEmissor?.nome ?? null,
+        emissorInstituicao: identidadeEmissor?.instituicao ?? null,
+      },
+      acessoRegistrado: { txHash, blockNumber, assinaturaHash },
+      mensagemAssinada,
+    });
+  } catch (err) {
+    res.status(500).json({ erro: blockchain.decodificarErro(err) });
+  }
+});
+
+module.exports = router;
