@@ -9,6 +9,10 @@ const ABI = [
   "function resolverDocumentoAtual(bytes32 documentId) view returns (bytes32 documentIdAtual)",
   "function registrarAcesso(bytes32 documentId, address verificador, bytes32 assinaturaHash)",
   "event AcessoRegistrado(bytes32 indexed documentId, address indexed verificador, bytes32 assinaturaHash, uint64 quando)",
+  // Eventos indexados pela Etapa 4 (ver src/indexador.js). Precisam estar na
+  // ABI para que contratoLeitura.filters.* e interface.parseLog() funcionem.
+  "event DocumentoRegistrado(bytes32 indexed documentId, bytes32 indexed documentHash, address indexed emissor, uint64 expiraEm)",
+  "event DocumentoSubstituido(bytes32 indexed documentIdAntigo, bytes32 indexed documentIdNovo, address indexed responsavel)",
   "error ApenasVara()",
   "error ApenasBackendAutorizado()",
   "error DocumentIdInvalido()",
@@ -77,6 +81,17 @@ async function resolverDocumentoAtual(documentId) {
 }
 
 /**
+ * Busca por hash de conteúdo (Task 4.4). Espelha consultarPorHash do contrato:
+ * responde se aquele documentHash já foi registrado e, em caso afirmativo, sob
+ * qual documentId — não depende do índice off-chain, vai direto ao contrato.
+ */
+async function consultarPorHash(documentHash) {
+  const r = await contratoLeitura.consultarPorHash(documentHash);
+  const existe = Boolean(r.existe);
+  return { existe, documentId: existe ? r.documentId : null };
+}
+
+/**
  * Busca o histórico de acessos (evento AcessoRegistrado) para um documento.
  *
  * NOTA TÉCNICA IMPORTANTE: contrato.queryFilter() e provider.getLogs() do
@@ -119,7 +134,14 @@ module.exports = {
   consultarStatus,
   obterRegistro,
   resolverDocumentoAtual,
+  consultarPorHash,
   obterHistoricoAcessos,
   registrarAcesso,
   wallet,
+  // Exportados para o indexador (Etapa 4) reaproveitar o MESMO provider e a
+  // MESMA instância de contrato de leitura (com a ABI/interface já montada),
+  // em vez de recriar provider/contrato e arriscar divergência de config.
+  provider,
+  contratoLeitura,
+  CONTRATO_ENDERECO,
 };
