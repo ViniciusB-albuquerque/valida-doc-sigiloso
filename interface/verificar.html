@@ -96,16 +96,13 @@ cadastrada e assinatura — o próprio acesso já fica registrado, de forma não
 parte do fluxo (não é um botão à parte).</p>
 
 <div class="aviso">
-  Ferramenta de <strong>desenvolvimento/teste</strong>. Numa versão final, o link/QR já
-  viria com endereço do contrato e identificador preenchidos — aqui você configura à mão.
+  Ferramenta de <strong>desenvolvimento/teste</strong>. O QR/link só precisa carregar o
+  identificador do documento — RPC e endereço do contrato já vêm fixos no código desta
+  página (não são mais aceitos por parâmetro de URL, ver docs/05-fluxo-e-plano.md § 3.8).
 </div>
 
 <section>
   <h2>Configuração</h2>
-  <label for="inputRpc">RPC da rede</label>
-  <input id="inputRpc" placeholder="http://127.0.0.1:8545" />
-  <label for="inputEndereco">Endereço do contrato</label>
-  <input id="inputEndereco" placeholder="0x..." />
   <label for="inputBackend">URL do backend</label>
   <input id="inputBackend" placeholder="http://localhost:3001" />
 </section>
@@ -117,6 +114,7 @@ parte do fluxo (não é um botão à parte).</p>
   <button id="btnConsultarPublico">Consultar</button>
   <div id="statusGrande" class="status-grande" style="display:none;"></div>
   <div id="resultadoPublico" class="resultado" style="display:none;"></div>
+  <button id="btnVerAtual" class="secundario" style="display:none;">Ver documento atual</button>
 
   <label style="margin-top:1rem;">Histórico de verificações (quem já confirmou ter visto os detalhes)</label>
   <div id="historico" class="resultado">Consulte um documento acima para ver o histórico.</div>
@@ -139,8 +137,25 @@ parte do fluxo (não é um botão à parte).</p>
 // para chamar registrarAcesso.
 const ABI = [
   "function consultarStatus(bytes32 documentId) view returns (uint8)",
+  "function resolverDocumentoAtual(bytes32 documentId) view returns (bytes32 documentIdAtual)",
   "event AcessoRegistrado(bytes32 indexed documentId, address indexed verificador, bytes32 assinaturaHash, uint64 quando)",
 ];
+
+// TASK 3.1 (Etapa 3) — RPC e endereço do contrato viram CONSTANTES FIXAS no
+// código da página, em vez de aceitos via parâmetro de URL (?rpc=...&address=...).
+//
+// Motivo: um QR/link forjado poderia apontar essa mesma página pra um RPC ou
+// contrato falsos, fabricando "documento válido" pra qualquer coisa, de forma
+// visualmente indistinguível da página real (ver docs/05-fluxo-e-plano.md § 3.8).
+// A correção original só previa travar o ENDEREÇO do contrato — estendi para
+// travar também o RPC, porque é exatamente a mesma classe de vulnerabilidade:
+// um RPC forjado consegue fabricar QUALQUER resposta (status, histórico),
+// mesmo que o endereço do contrato esteja correto.
+//
+// TROQUE ESTES DOIS VALORES a cada novo deploy (é o único lugar do arquivo
+// que precisa mudar):
+const RPC_URL = "http://127.0.0.1:8545"; // TODO: ajuste para a rede de publicação (ex.: Besu)
+const CONTRATO_ENDERECO = "0x0000000000000000000000000000000000000000"; // TODO: endereço real do deploy
 
 const STATUS_NOMES = ["Valido", "Expirado", "Revogado", "Substituido"];
 const CHAIN_ID_ESPERADO = 1337n;
@@ -148,13 +163,15 @@ const CHAIN_ID_ESPERADO = 1337n;
 let providerLeitura, providerCarteira, signer, contratoLeitura;
 let documentIdAtual = null;
 
-// Preenche os campos a partir da URL, ex.:
-// verificar.html?rpc=http://127.0.0.1:8545&address=0x...&id=0x...&backend=http://localhost:3001
+// Preenche o identificador a partir da URL, ex.: verificar.html?id=0x...
+// (é exatamente esse padrão de link que o QR gerado em index.html usa —
+// ver Task 3.2). RPC/endereço não são mais lidos daqui (Task 3.1).
 const params = new URLSearchParams(window.location.search);
-document.getElementById("inputRpc").value = params.get("rpc") || "http://127.0.0.1:8545";
-document.getElementById("inputEndereco").value = params.get("address") || "";
 document.getElementById("inputId").value = params.get("id") || "";
 document.getElementById("inputBackend").value = params.get("backend") || "http://localhost:3001";
+
+providerLeitura = new ethers.JsonRpcProvider(RPC_URL);
+contratoLeitura = new ethers.Contract(CONTRATO_ENDERECO, ABI, providerLeitura);
 
 if (window.ethereum) {
   window.ethereum.on("accountsChanged", () => window.location.reload());
@@ -207,21 +224,17 @@ async function carregarHistorico(backendUrl, documentId) {
   }
 }
 
-document.getElementById("btnConsultarPublico").onclick = async () => {
-  const rpc = document.getElementById("inputRpc").value.trim();
-  const endereco = document.getElementById("inputEndereco").value.trim();
+// Task 3.3: extraída como função nomeada (em vez de só um onclick anônimo)
+// para poder ser chamada tanto pelo clique manual quanto automaticamente,
+// se a URL já vier com ?id=... (fluxo do QR — ver mais abaixo).
+async function consultarPublico(idBruto) {
   const backendUrl = document.getElementById("inputBackend").value.trim().replace(/\/$/, "");
-  const idBruto = document.getElementById("inputId").value.trim();
-
-  if (!ethers.isAddress(endereco)) return alert("Endereço de contrato inválido.");
   if (!idBruto) return alert("Preencha o identificador do documento.");
 
   documentIdAtual = resolverDocumentId(idBruto);
+  document.getElementById("btnVerAtual").style.display = "none";
 
   try {
-    providerLeitura = new ethers.JsonRpcProvider(rpc);
-    contratoLeitura = new ethers.Contract(endereco, ABI, providerLeitura);
-
     const status = await contratoLeitura.consultarStatus(documentIdAtual);
     const nome = STATUS_NOMES[Number(status)] || "desconhecido";
 
@@ -232,6 +245,13 @@ document.getElementById("btnConsultarPublico").onclick = async () => {
 
     mostrar("resultadoPublico", `documentId: ${documentIdAtual}\nstatus: ${nome}`);
 
+    // Task 3.4: se foi substituído, oferece o caminho pra versão vigente —
+    // sem isso, a verificação vira um beco sem saída pra quem só tem o QR
+    // do documento antigo impresso no papel.
+    if (nome === "Substituido") {
+      document.getElementById("btnVerAtual").style.display = "inline-block";
+    }
+
     await carregarHistorico(backendUrl, documentIdAtual);
 
     // Já que temos um documento carregado, libera o botão do Nível 2
@@ -240,6 +260,23 @@ document.getElementById("btnConsultarPublico").onclick = async () => {
   } catch (err) {
     document.getElementById("statusGrande").style.display = "none";
     mostrar("resultadoPublico", "Erro: " + decodificarErro(err, contratoLeitura));
+  }
+}
+
+document.getElementById("btnConsultarPublico").onclick = () => {
+  consultarPublico(document.getElementById("inputId").value.trim());
+};
+
+// Task 3.4: pula direto pro fim da cadeia de substituições (mesmo que seja
+// A -> B -> C), sem custo de gas (view) — reaproveita a mesma tela, só troca
+// qual documentId está sendo mostrado.
+document.getElementById("btnVerAtual").onclick = async () => {
+  try {
+    const idAtualResolvido = await contratoLeitura.resolverDocumentoAtual(documentIdAtual);
+    document.getElementById("inputId").value = idAtualResolvido;
+    await consultarPublico(idAtualResolvido);
+  } catch (err) {
+    mostrar("resultadoPublico", "Erro ao resolver documento atual: " + decodificarErro(err, contratoLeitura));
   }
 };
 
@@ -333,6 +370,14 @@ document.getElementById("btnVerDetalhes").onclick = async () => {
     mostrar("resultadoDetalhado", "Erro: " + (err?.message || String(err)));
   }
 };
+
+// Task 3.3: se a URL já veio com ?id=..., é porque a pessoa chegou aqui via
+// QR ou link direto — o Nível 1 carrega SOZINHO, sem exigir clicar em
+// "Consultar" primeiro. Isso não muda nada pra quem abre a página em branco
+// (sem ?id=, o campo fica vazio e nada é chamado automaticamente).
+if (params.get("id")) {
+  consultarPublico(params.get("id"));
+}
 </script>
 </body>
 </html>
