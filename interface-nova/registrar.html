@@ -2,9 +2,21 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8" />
-<title>VerificaJus Sigilo — Interface mínima</title>
+<title>VerificaJus Sigilo — Registrar documento</title>
 <script src="https://unpkg.com/ethers@6/dist/ethers.umd.min.js" type="application/javascript"></script>
 <script src="util.js"></script>
+<script>
+const CHAVE_SESSAO = "verificajus_sessao";
+try {
+  const bruto = sessionStorage.getItem(CHAVE_SESSAO);
+  const sessao = bruto ? JSON.parse(bruto) : null;
+  if (!sessao || typeof sessao !== "object") {
+    window.location.href = "login";
+  }
+} catch (err) {
+  window.location.href = "login";
+}
+</script>
 <style>
   :root { color-scheme: light; }
   body {
@@ -16,6 +28,7 @@
     background: #fafafa;
   }
   h1 { font-size: 1.3rem; margin-bottom: 0; }
+  p.subtitulo { color: #555; font-size: 0.9rem; margin-top: 0.3rem; }
   .aviso {
     background: #fff4e5;
     border: 1px solid #f0c36d;
@@ -51,7 +64,6 @@
     font-size: 0.85rem;
     cursor: pointer;
   }
-  button.secundario { background: #52606d; }
   button:disabled { background: #b0b7bd; cursor: not-allowed; }
   .resultado {
     margin-top: 0.8rem;
@@ -62,23 +74,22 @@
     white-space: pre-wrap;
     word-break: break-all;
   }
-  #log { max-height: 220px; overflow-y: auto; font-size: 0.78rem; }
   #contaAtual { font-size: 0.82rem; color: #444; }
   #qrResultado { margin-top: 0.8rem; text-align: center; }
-  #qrResultado canvas, #qrResultado img { border: 1px solid #e2e2e2; border-radius: 8px; padding: 0.5rem; background: white; }
+  #qrResultado img { border: 1px solid #e2e2e2; border-radius: 8px; padding: 0.5rem; background: white; }
   #qrLink { font-size: 0.75rem; word-break: break-all; margin-top: 0.5rem; color: #555; }
+  a.link-voltar { font-size: 0.85rem; color: #1f2933; }
 </style>
 </head>
 <body>
 
-<h1>VerificaJus Sigilo — Interface mínima</h1>
+<a class="link-voltar" href="painel">← Voltar ao painel</a>
+<h1>VerificaJus Sigilo — Registrar documento</h1>
+<p class="subtitulo">Só a Vara consegue registrar. Conecte a carteira autorizada para continuar.</p>
+
 <div class="aviso">
-  Ferramenta de <strong>desenvolvimento/teste</strong>, não é a interface final do projeto.
-  A conta conectada já é reconhecida (Vara vs. verificador) e o hash do documento já é
-  calculado a partir de um PDF real — mas ainda não implementa os 3 perfis de acesso
-  diferenciado (Polícia Federal, companhia aérea, Conselho Tutelar), nem filtragem de dados
-  sensíveis por perfil — isso é responsabilidade do backend com RBAC.
-  Aqui você fala <em>diretamente</em> com o contrato pelo MetaMask.
+  Ferramenta de <strong>desenvolvimento/teste</strong>. O hash do documento é calculado a partir
+  do conteúdo real do PDF, no seu navegador — o arquivo em si nunca é enviado a lugar nenhum.
 </div>
 
 <section>
@@ -96,77 +107,29 @@
   <h2>2. Registrar documento</h2>
   <label for="regRotulo">Identificador interno do documento (ex.: alvara-viagem-0001)</label>
   <input id="regRotulo" placeholder="alvara-viagem-0001" />
-  <label for="regArquivo">Documento (PDF) — o hash é calculado a partir do conteúdo real do arquivo, no seu navegador</label>
+  <label for="regArquivo">Documento (PDF)</label>
   <input id="regArquivo" type="file" accept="application/pdf" />
   <div id="regHashPreview" class="resultado" style="display:none;"></div>
 
-  <!-- Task 5.3: aviso de duplicata por hash — aparece se o PDF carregado
-       já tiver sido registrado antes (sob qualquer identificador), com um
-       link direto pro Nível 1 desse documento já existente. -->
   <div id="avisoHashDuplicado" class="aviso" style="display:none;"></div>
+
   <label for="regExpira">Expira em (opcional — deixe vazio para sem expiração)</label>
   <input id="regExpira" type="datetime-local" />
   <button id="btnRegistrar">Registrar</button>
   <div id="resultadoRegistrar" class="resultado" style="display:none;"></div>
 
-  <!-- Task 3.2 (Etapa 3): QR Code gerado automaticamente após o registro
-       ter sucesso, apontando para verificar?id=<documentId>. Não inclui
-       endereço do contrato nem RPC na URL — esses já são fixos dentro de
-       verificar (Task 3.1), então o QR só precisa carregar o id. -->
   <div id="qrResultado" style="display:none;">
     <img id="qrImagem" alt="QR Code de verificação" width="220" height="220" />
     <div id="qrLink"></div>
   </div>
 </section>
 
-<section>
-  <h2>3. Consultar documento</h2>
-  <label for="consRotulo">Identificador interno do documento</label>
-  <input id="consRotulo" placeholder="alvara-viagem-0001" />
-  <label for="consArquivo">(Opcional) Reenviar o mesmo PDF para conferir integridade</label>
-  <input id="consArquivo" type="file" accept="application/pdf" />
-  <button id="btnConsultar">Consultar status</button>
-  <button id="btnRegistroCompleto" class="secundario">Ver registro completo</button>
-  <div id="resultadoConsulta" class="resultado" style="display:none;"></div>
-</section>
-
-<section id="secRevogar">
-  <h2>4. Revogar documento</h2>
-  <label for="revRotulo">Identificador interno do documento</label>
-  <input id="revRotulo" placeholder="alvara-viagem-0001" />
-  <button id="btnRevogar">Revogar</button>
-  <div id="resultadoRevogar" class="resultado" style="display:none;"></div>
-</section>
-
-<section>
-  <h2>5. Log de eventos on-chain</h2>
-  <div id="log" class="resultado">Nenhum evento ainda. Registre ou revogue um documento acima.</div>
-</section>
-
 <script>
 const ABI = [
   "function vara() view returns (address)",
   "function registrarDocumento(bytes32 documentId, bytes32 documentHash, uint64 expiraEm)",
-  "function revogarDocumento(bytes32 documentId)",
-  "function substituirDocumento(bytes32 documentIdAntigo, bytes32 documentIdNovo, bytes32 documentHashNovo, uint64 expiraEmNovo)",
-  "function consultarStatus(bytes32 documentId) view returns (uint8)",
-  "function obterRegistro(bytes32 documentId) view returns (bytes32 documentHash, address emissor, uint64 emitidoEm, uint64 expiraEm, uint8 status, bytes32 substituidoPor)",
   "function consultarPorHash(bytes32 documentHash) view returns (bool existe, bytes32 documentId)",
-  "function transferirVara(address novaVara)",
-  "event DocumentoRegistrado(bytes32 indexed documentId, bytes32 indexed documentHash, address indexed emissor, uint64 expiraEm)",
-  "event DocumentoRevogado(bytes32 indexed documentId, address indexed revogadoPor, uint64 revogadoEm)",
-  "event DocumentoSubstituido(bytes32 indexed documentIdAntigo, bytes32 indexed documentIdNovo, address indexed responsavel)",
-  "error ApenasVara()",
-  "error DocumentIdInvalido()",
-  "error DocumentHashInvalido()",
-  "error EnderecoInvalido()",
-  "error DocumentoJaRegistrado(bytes32 documentId)",
-  "error HashJaRegistrado(bytes32 documentHash, bytes32 documentIdExistente)",
-  "error DocumentoInexistente(bytes32 documentId)",
-  "error DocumentoNaoValido(bytes32 documentId, uint8 statusAtual)"
 ];
-
-const STATUS_NOMES = ["Valido", "Expirado", "Revogado", "Substituido"];
 
 let provider, signer, contrato;
 let isVara = false;
@@ -177,20 +140,6 @@ if (window.ethereum) {
 }
 
 const CHAIN_ID_ESPERADO = 1337n;
-
-// Task 5.4: se a URL vier com ?id=..., pré-preenche consulta e revogação —
-// é o link que "Acessar documento" na tela de busca usa. Roda direto (sem
-// esperar DOMContentLoaded): como o <script> já está no final do <body>,
-// o DOM já está pronto nesse ponto — esperar o evento seria tarde demais,
-// ele já teria disparado antes do listener ser registrado.
-{
-  const params = new URLSearchParams(window.location.search);
-  const idDaUrl = params.get("id");
-  if (idDaUrl) {
-    document.getElementById("consRotulo").value = idDaUrl;
-    document.getElementById("revRotulo").value = idDaUrl;
-  }
-}
 
 async function hashArquivo(file) {
   const buffer = await file.arrayBuffer();
@@ -203,24 +152,13 @@ function atualizarPapelUsuario(enderecoConectado, enderecoVara) {
   const el = document.getElementById("papelUsuario");
   el.style.display = "block";
   el.textContent = isVara
-    ? `Você é a Vara (${enderecoConectado}) — pode registrar e revogar documentos.`
-    : `Você está conectado como verificador (${enderecoConectado}) — só pode consultar. ` +
+    ? `Você é a Vara (${enderecoConectado}) — pode registrar.`
+    : `Você está conectado como verificador (${enderecoConectado}) — não pode registrar. ` +
       `A Vara deste contrato é ${enderecoVara}.`;
-  el.style.background = isVara ? "" : "#f4f6f7";
 
-  const secRegistrar = document.getElementById("secRegistrar");
-  const secRevogar = document.getElementById("secRevogar");
-  for (const sec of [secRegistrar, secRevogar]) {
-    sec.style.opacity = isVara ? "1" : "0.5";
-    sec.querySelectorAll("input, button").forEach((el) => (el.disabled = !isVara));
-  }
-}
-
-function logEvento(texto) {
-  const el = document.getElementById("log");
-  if (el.textContent.startsWith("Nenhum evento")) el.textContent = "";
-  const linha = `[${new Date().toLocaleTimeString()}] ${texto}\n`;
-  el.textContent = linha + el.textContent;
+  document.getElementById("secRegistrar").querySelectorAll("input, button").forEach((el) => {
+    el.disabled = !isVara;
+  });
 }
 
 function mostrar(id, texto) {
@@ -297,27 +235,13 @@ document.getElementById("btnCarregar").onclick = async () => {
   if (!ethers.isAddress(endereco)) return alert("Endereço de contrato inválido.");
   if (!signer) return alert("Conecte o MetaMask primeiro.");
 
-  if (contrato) {
-    await contrato.removeAllListeners();
-  }
-
   contrato = new ethers.Contract(endereco, ABI, signer);
-
-  contrato.on("DocumentoRegistrado", (documentId, documentHash, emissor) => {
-    logEvento(`DocumentoRegistrado documentId=${documentId} emissor=${emissor}`);
-  });
-  contrato.on("DocumentoRevogado", (documentId, revogadoPor) => {
-    logEvento(`DocumentoRevogado documentId=${documentId} revogadoPor=${revogadoPor}`);
-  });
-  contrato.on("DocumentoSubstituido", (idAntigo, idNovo) => {
-    logEvento(`DocumentoSubstituido antigo=${idAntigo} novo=${idNovo}`);
-  });
 
   const enderecoVara = await contrato.vara();
   const enderecoConectado = await signer.getAddress();
   atualizarPapelUsuario(enderecoConectado, enderecoVara);
 
-  alert("Contrato carregado. Já pode registrar/consultar/revogar.");
+  alert("Contrato carregado. Já pode registrar.");
 };
 
 document.getElementById("regArquivo").addEventListener("change", async (ev) => {
@@ -327,7 +251,7 @@ document.getElementById("regArquivo").addEventListener("change", async (ev) => {
   const btnRegistrar = document.getElementById("btnRegistrar");
 
   avisoEl.style.display = "none";
-  btnRegistrar.disabled = !isVara; // volta ao padrão normal (habilitado se for vara)
+  btnRegistrar.disabled = !isVara;
 
   if (!file) { el.style.display = "none"; return; }
 
@@ -335,10 +259,7 @@ document.getElementById("regArquivo").addEventListener("change", async (ev) => {
   el.style.display = "block";
   el.textContent = `Arquivo: ${file.name} (${file.size} bytes)\ndocumentHash calculado: ${hash}`;
 
-  // Task 5.3: checa duplicata por conteúdo ANTES de deixar preencher o
-  // resto do formulário — evita gastar tempo (e uma transação que ia
-  // reverter) registrando um PDF que já existe sob outro identificador.
-  if (!contrato) return; // sem contrato carregado ainda, não dá pra checar
+  if (!contrato) return;
 
   try {
     const [existe, documentIdExistente] = await contrato.consultarPorHash(hash);
@@ -351,22 +272,13 @@ document.getElementById("regArquivo").addEventListener("change", async (ev) => {
         `Este documento (mesmo conteúdo de arquivo) já foi registrado, sob outro identificador.<br/>` +
         `<a href="${linkVerificar.toString()}" target="_blank">Ver documento existente</a>`;
 
-      // Bloqueia o registro — tentar de novo só resultaria em
-      // HashJaRegistrado revertendo a transação, gastando gas à toa.
       btnRegistrar.disabled = true;
     }
   } catch (err) {
-    // Checagem é só uma conveniência — se falhar (ex.: rede instável),
-    // não impede o fluxo normal de registro, só não avisa antecipadamente.
     console.warn("Não foi possível checar duplicata por hash:", err);
   }
 });
 
-// Task 3.2: gera o QR apontando para verificar?id=<documentId> — nada
-// mais na URL, já que endereço do contrato e RPC ficam fixos dentro de
-// verificar (Task 3.1). Usa a API pública goqr.me/api.qrserver.com via
-// uma simples tag <img> — sem depender de nenhuma biblioteca JS de canvas
-// rodando no navegador (mais simples, menos coisa que pode quebrar).
 function gerarQrParaDocumento(documentId) {
   const url = new URL("verificar", window.location.href);
   url.searchParams.set("id", documentId);
@@ -404,67 +316,6 @@ document.getElementById("btnRegistrar").onclick = async () => {
     gerarQrParaDocumento(documentId);
   } catch (err) {
     mostrar("resultadoRegistrar", "Erro: " + decodificarErro(err, contrato));
-  }
-};
-
-async function consultar(retornarCompleto) {
-  if (!contrato) return alert("Carregue o contrato primeiro.");
-  const rotulo = document.getElementById("consRotulo").value;
-  if (!rotulo) return alert("Preencha o identificador do documento.");
-  const documentId = resolverIdentificadorDocumento(rotulo);
-
-  try {
-    if (retornarCompleto) {
-      const r = await contrato.obterRegistro(documentId);
-
-      let linhaIntegridade = "";
-      const arquivo = document.getElementById("consArquivo").files[0];
-      if (arquivo) {
-        const hashReenviado = await hashArquivo(arquivo);
-        const confere = hashReenviado.toLowerCase() === r.documentHash.toLowerCase();
-        linhaIntegridade =
-          `\n\nArquivo reenviado: ${arquivo.name}\n` +
-          `Hash calculado agora:  ${hashReenviado}\n` +
-          `Hash gravado on-chain: ${r.documentHash}\n` +
-          (confere ? "Resultado: ÍNTEGRO." : "Resultado: NÃO CONFERE.");
-      }
-
-      mostrar(
-        "resultadoConsulta",
-        `documentId: ${documentId}\n` +
-        `documentHash: ${r.documentHash}\n` +
-        `emissor: ${r.emissor}\n` +
-        `emitidoEm: ${new Date(Number(r.emitidoEm) * 1000).toLocaleString()}\n` +
-        `expiraEm: ${r.expiraEm == 0n ? "sem expiração" : new Date(Number(r.expiraEm) * 1000).toLocaleString()}\n` +
-        `status: ${STATUS_NOMES[Number(r.status)]}\n` +
-        `substituidoPor: ${r.substituidoPor === ethers.ZeroHash ? "-" : r.substituidoPor}` +
-        linhaIntegridade
-      );
-    } else {
-      const status = await contrato.consultarStatus(documentId);
-      mostrar("resultadoConsulta", `documentId: ${documentId}\nstatus: ${STATUS_NOMES[Number(status)]}`);
-    }
-  } catch (err) {
-    mostrar("resultadoConsulta", "Erro: " + decodificarErro(err, contrato));
-  }
-}
-
-document.getElementById("btnConsultar").onclick = () => consultar(false);
-document.getElementById("btnRegistroCompleto").onclick = () => consultar(true);
-
-document.getElementById("btnRevogar").onclick = async () => {
-  if (!contrato) return alert("Carregue o contrato primeiro.");
-  const rotulo = document.getElementById("revRotulo").value;
-  if (!rotulo) return alert("Preencha o identificador do documento.");
-  const documentId = resolverIdentificadorDocumento(rotulo);
-
-  try {
-    const tx = await contrato.revogarDocumento(documentId);
-    mostrar("resultadoRevogar", `Transação enviada: ${tx.hash}\nAguardando confirmação...`);
-    const receipt = await tx.wait();
-    mostrar("resultadoRevogar", `Confirmado no bloco ${receipt.blockNumber}\ntx: ${receipt.hash}`);
-  } catch (err) {
-    mostrar("resultadoRevogar", "Erro: " + decodificarErro(err, contrato));
   }
 };
 </script>
