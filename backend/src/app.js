@@ -4,6 +4,7 @@ const cors = require("cors");
 
 const documentosRouter = require("./routes/documentos");
 const identidadesRouter = require("./routes/identidades");
+const authRouter = require("./routes/auth");
 const blockchain = require("./blockchain");
 
 const app = express();
@@ -12,6 +13,7 @@ app.use(express.json());
 
 app.use("/api/documentos", documentosRouter);
 app.use("/api/identidades", identidadesRouter);
+app.use("/api/auth", authRouter);
 
 app.get("/api/saude", (req, res) => {
   res.json({ ok: true, backend: blockchain.wallet.address });
