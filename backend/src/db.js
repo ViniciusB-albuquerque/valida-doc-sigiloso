@@ -9,28 +9,162 @@ const SEED_INDEXADOR_PATH = path.join(__dirname, "seed-indexador.sql");
 const db = new Database(DB_PATH);
 db.pragma("journal_mode = WAL");
 
+// Migração leve para quem já rodou versões anteriores do backend: o seed antigo
+// criava `identidades` sem `perfil`. Como CREATE TABLE IF NOT EXISTS não altera
+// tabelas existentes, garantimos a coluna antes de executar o seed novo.
+function tabelaExiste(nome) {
+  return Boolean(db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(nome));
+}
+
+function colunaExiste(tabela, coluna) {
+  if (!tabelaExiste(tabela)) return false;
+  return db.prepare(`PRAGMA table_info(${tabela})`).all().some((c) => c.name === coluna);
+}
+
+if (tabelaExiste("identidades") && !colunaExiste("identidades", "perfil")) {
+  db.exec("ALTER TABLE identidades ADD COLUMN perfil TEXT NOT NULL DEFAULT 'verificador'");
+}
+
+const POLITICAS_VISIBILIDADE = {
+  policia_federal: {
+    nivel: "N3 - Validacao migratoria completa",
+    descricao: "Pode ver os dados necessarios para confirmar embarque internacional, responsavel, acompanhante e destino.",
+    campos: [
+      "tipoDocumento",
+      "numeroControle",
+      "autorizacaoResumo",
+      "nomeCrianca",
+      "responsavelLegal",
+      "acompanhante",
+      "destino",
+      "periodoViagem",
+    ],
+  },
+  companhia_aerea: {
+    nivel: "N2 - Conferencia operacional de embarque",
+    descricao: "Pode ver somente os dados necessarios para decidir se o embarque deve ser aceito.",
+    campos: [
+      "tipoDocumento",
+      "numeroControle",
+      "autorizacaoResumo",
+      "nomeCrianca",
+      "acompanhante",
+      "destino",
+      "periodoViagem",
+    ],
+  },
+  conselho_tutelar: {
+    nivel: "N3 - Protecao e acompanhamento",
+    descricao: "Pode ver dados necessarios para acompanhamento protetivo, sem receber detalhes de viagem quando nao forem pertinentes.",
+    campos: [
+      "tipoDocumento",
+      "numeroControle",
+      "autorizacaoResumo",
+      "nomeCrianca",
+      "responsavelLegal",
+      "medidasProtecao",
+      "contatoInstitucional",
+    ],
+  },
+  vara: {
+    nivel: "N4 - Administracao integral",
+    descricao: "Pode ver todos os metadados off-chain cadastrados para emitir, auditar, revogar ou substituir o documento.",
+    campos: [
+      "documentId",
+      "tipoDocumento",
+      "numeroControle",
+      "nomeCrianca",
+      "responsavelLegal",
+      "acompanhante",
+      "destino",
+      "periodoViagem",
+      "autorizacaoResumo",
+      "medidasProtecao",
+      "contatoInstitucional",
+    ],
+  },
+  verificador: {
+    nivel: "N1 - Autenticidade publica",
+    descricao: "Pode ver somente a autenticidade/status publico do documento, sem dados sensiveis off-chain.",
+    campos: ["tipoDocumento", "numeroControle", "autorizacaoResumo"],
+  },
+};
+
+function politicaVisibilidadePorPerfil(perfil) {
+  return POLITICAS_VISIBILIDADE[perfil] || POLITICAS_VISIBILIDADE.verificador;
+}
+
 // Roda os seeds toda vez que o servidor sobe — são idempotentes (CREATE TABLE
 // IF NOT EXISTS + INSERT OR IGNORE), então não duplicam nem falham se já
-// rodaram antes. seed.sql = dados de identidades; seed-indexador.sql = schema
-// das tabelas do indexador de eventos (Etapa 4).
+// rodaram antes. seed.sql = dados de identidades/dados off-chain; seed-indexador.sql =
+// schema das tabelas do indexador de eventos (Etapa 4).
 db.exec(fs.readFileSync(SEED_PATH, "utf8"));
 db.exec(fs.readFileSync(SEED_INDEXADOR_PATH, "utf8"));
 
 /**
- * Busca a identidade (nome, instituição) de um endereço.
+ * Busca a identidade (nome, instituição e perfil) de um endereço.
  * Comparação sempre em minúsculas — endereços Ethereum são case-insensitive
  * no valor (o "checksum" com maiúsculas/minúsculas é só uma checagem visual
  * opcional, EIP-55), então normalizamos para não depender de vir formatado
  * igual em todo lugar.
  */
 function buscarIdentidade(endereco) {
-  const stmt = db.prepare("SELECT nome, instituicao FROM identidades WHERE endereco = ?");
+  const stmt = db.prepare("SELECT nome, instituicao, perfil FROM identidades WHERE endereco = ?");
   return stmt.get(endereco.toLowerCase()) || null;
 }
 
 /** true se o endereço está cadastrado — usado como o gate da Camada 1 (Nível 2). */
 function estaAutorizado(endereco) {
   return buscarIdentidade(endereco) !== null;
+}
+
+/**
+ * Busca os metadados sensíveis mantidos off-chain.
+ *
+ * A blockchain armazena só hash/status. Dados de criança/adolescente, destino,
+ * responsáveis e medidas de proteção ficam aqui, atrás do controle de acesso por
+ * perfil. Em produção isso viria do banco judicial ou de um cofre de dados, não
+ * de um seed de demonstração.
+ */
+function buscarDadosDocumento(documentId) {
+  return (
+    db
+      .prepare(
+        `SELECT documentId, tipoDocumento, numeroControle, nomeCrianca, responsavelLegal,
+                acompanhante, destino, periodoViagem, autorizacaoResumo, medidasProtecao,
+                contatoInstitucional
+           FROM documentos_dados_offchain
+          WHERE documentId = ?`
+      )
+      .get(String(documentId).toLowerCase()) || null
+  );
+}
+
+/**
+ * Aplica validação seletiva: cada instituição recebe apenas o necessário para
+ * sua finalidade. O contrato prova autenticidade/status; esta camada decide
+ * quais campos off-chain podem ser revelados a quem assinou o acesso.
+ */
+function filtrarDadosDocumentoPorPerfil(dados, perfil) {
+  const politica = politicaVisibilidadePorPerfil(perfil);
+
+  if (!dados) {
+    return {
+      nivel: politica.nivel,
+      descricao: politica.descricao,
+      camposPermitidos: [],
+      dados: {
+        aviso: "Documento autenticado na blockchain, mas sem metadados off-chain cadastrados nesta demo.",
+      },
+    };
+  }
+
+  return {
+    nivel: politica.nivel,
+    descricao: politica.descricao,
+    camposPermitidos: politica.campos,
+    dados: Object.fromEntries(politica.campos.map((campo) => [campo, dados[campo]])),
+  };
 }
 
 // --- Estado do indexador (Etapa 4) -----------------------------------------
@@ -43,10 +177,7 @@ function getEstadoIndexador(chave, padrao = null) {
 
 /** Grava/atualiza um valor de indexador_estado (INSERT OR REPLACE — idempotente). */
 function setEstadoIndexador(chave, valor) {
-  db.prepare("INSERT OR REPLACE INTO indexador_estado (chave, valor) VALUES (?, ?)").run(
-    chave,
-    String(valor)
-  );
+  db.prepare("INSERT OR REPLACE INTO indexador_estado (chave, valor) VALUES (?, ?)").run(chave, String(valor));
 }
 
 // --- Escrita das tabelas indexadas (Etapa 4) --------------------------------
@@ -134,6 +265,9 @@ module.exports = {
   db,
   buscarIdentidade,
   estaAutorizado,
+  buscarDadosDocumento,
+  filtrarDadosDocumentoPorPerfil,
+  politicaVisibilidadePorPerfil,
   getEstadoIndexador,
   setEstadoIndexador,
   registrarDocumentoIndexado,

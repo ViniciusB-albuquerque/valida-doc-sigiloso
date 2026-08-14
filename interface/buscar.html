@@ -1,309 +1,302 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8" />
-<title>VerificaJus Sigilo — Encontrar documento</title>
-<script src="https://unpkg.com/ethers@6/dist/ethers.umd.min.js" type="application/javascript"></script>
-<script src="util.js"></script>
-<script>
-// Guarda de sessão — roda ANTES de o <body> renderizar. Se não houver uma
-// sessão válida em sessionStorage, redireciona na hora para o login, de
-// modo que a página nunca chega a aparecer vazia para quem não entrou.
-const CHAVE_SESSAO = "verificajus_sessao";
-var SESSAO = null;
-try {
-  const bruto = sessionStorage.getItem(CHAVE_SESSAO);
-  if (!bruto) throw new Error("sem sessão");
-  SESSAO = JSON.parse(bruto); // lança se não for JSON válido
-  if (!SESSAO || typeof SESSAO !== "object") throw new Error("sessão inválida");
-} catch (err) {
-  window.location.href = "login";
-}
-</script>
-<style>
-  :root { color-scheme: light; }
-  body {
-    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-    max-width: 780px;
-    margin: 2rem auto;
-    padding: 0 1rem;
-    color: #1c1c1c;
-    background: #fafafa;
-  }
-  h1 { font-size: 1.3rem; margin-bottom: 0; }
-  .aviso {
-    background: #fff4e5;
-    border: 1px solid #f0c36d;
-    padding: 0.75rem 1rem;
-    border-radius: 8px;
-    font-size: 0.85rem;
-    margin: 1rem 0 1.5rem;
-  }
-  section {
-    background: white;
-    border: 1px solid #e2e2e2;
-    border-radius: 10px;
-    padding: 1rem 1.25rem;
-    margin-bottom: 1.25rem;
-  }
-  section h2 { font-size: 1rem; margin-top: 0; }
-  label { display: block; font-size: 0.85rem; margin: 0.6rem 0 0.2rem; color: #444; }
-  input, select {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 0.45rem 0.6rem;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    font-size: 0.9rem;
-  }
-  button {
-    margin-top: 0.8rem;
-    padding: 0.5rem 1rem;
-    border: none;
-    border-radius: 6px;
-    background: #1f2933;
-    color: white;
-    font-size: 0.85rem;
-    cursor: pointer;
-  }
-  button.secundario { background: #52606d; }
-  .modo-busca {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 0.8rem;
-    font-size: 0.85rem;
-  }
-  .modo-busca label { display: flex; align-items: center; gap: 0.3rem; margin: 0; font-weight: normal; }
-  .campo-modo { display: none; }
-  .campo-modo.ativo { display: block; }
-  .resultado-msg {
-    margin-top: 0.8rem;
-    padding: 0.7rem;
-    background: #f4f6f7;
-    border-radius: 6px;
-    font-size: 0.82rem;
-  }
-  .card-documento {
-    border: 1px solid #e2e2e2;
-    border-radius: 8px;
-    padding: 0.8rem 1rem;
-    margin-top: 0.7rem;
-    font-size: 0.85rem;
-  }
-  .card-documento .doc-id { font-size: 0.75rem; color: #777; word-break: break-all; }
-  .status-pill {
-    display: inline-block;
-    padding: 0.1rem 0.6rem;
-    border-radius: 999px;
-    font-size: 0.78rem;
-    font-weight: 600;
-    margin: 0.3rem 0;
-  }
-  .status-Valido { background: #d7f5df; color: #1a7a3d; }
-  .status-Expirado { background: #f5e9d7; color: #8a5b1a; }
-  .status-Revogado { background: #f7d9d9; color: #a12b2b; }
-  .status-Substituido { background: #dde3f7; color: #2b3ea1; }
-  .card-documento .acoes { margin-top: 0.5rem; display: flex; gap: 0.8rem; }
-  .card-documento .acoes a { font-size: 0.82rem; color: #1f2933; }
-  #contaAtual { font-size: 0.82rem; color: #444; margin-bottom: 1rem; }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VerificaJus Sigilo - Buscar documentos</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://unpkg.com/ethers@6/dist/ethers.umd.min.js" type="application/javascript"></script>
+  <script src="util.js"></script>
+  <script>
+    const CHAVE_SESSAO = "verificajus_sessao";
+    var SESSAO = null;
+    try {
+      const bruto = sessionStorage.getItem(CHAVE_SESSAO);
+      if (!bruto) throw new Error("sem sessao");
+      SESSAO = normalizarPerfilSessao(JSON.parse(bruto));
+      if (!SESSAO || typeof SESSAO !== "object") throw new Error("sessao invalida");
+      sessionStorage.setItem(CHAVE_SESSAO, JSON.stringify(SESSAO));
+    } catch (err) {
+      window.location.href = "login.html";
+    }
+  </script>
+  <style>
+    .campo-modo { display: none; }
+    .campo-modo.ativo { display: block; }
+    .doc-card { margin-top: 1rem; }
+    .mono-break { word-break: break-word; overflow-wrap: anywhere; }
+  </style>
 </head>
 <body>
+  <div class="gs-federal-stripe"></div>
 
-<h1>VerificaJus Sigilo — Encontrar documento</h1>
-<div id="contaAtual"></div>
-
-<div class="aviso">
-  Ferramenta de <strong>desenvolvimento/teste</strong>. Cada resultado oferece dois caminhos:
-  "Ver documento" (verificação pública, Nível 1 — e Nível 2 se você conectar carteira lá) e
-  "Acessar documento" (Nível 3, só funciona se você for a Vara).
-</div>
-
-<section>
-  <h2>Configuração</h2>
-  <label for="inputBackend">URL do backend</label>
-  <input id="inputBackend" placeholder="http://localhost:3001" />
-</section>
-
-<section>
-  <h2>Buscar</h2>
-  <div class="modo-busca">
-    <label><input type="radio" name="modo" value="id" checked /> Por identificador</label>
-    <label><input type="radio" name="modo" value="hash" /> Por arquivo (hash)</label>
-    <label><input type="radio" name="modo" value="filtro" /> Por status/data</label>
-  </div>
-
-  <div id="campoId" class="campo-modo ativo">
-    <label for="inputId">Identificador do documento (hash, ou rótulo interno usado no registro)</label>
-    <input id="inputId" placeholder="0x... ou alvara-viagem-0001" />
-  </div>
-
-  <div id="campoHash" class="campo-modo">
-    <label for="inputArquivo">Documento (PDF) — busca pelo mesmo conteúdo já registrado</label>
-    <input id="inputArquivo" type="file" accept="application/pdf" />
-  </div>
-
-  <div id="campoFiltro" class="campo-modo">
-    <label for="inputStatus">Status</label>
-    <select id="inputStatus">
-      <option value="">(qualquer)</option>
-      <option value="Valido">Válido</option>
-      <option value="Expirado">Expirado</option>
-      <option value="Revogado">Revogado</option>
-      <option value="Substituido">Substituído</option>
-    </select>
-    <label for="inputDesde">Emitido desde (opcional)</label>
-    <input id="inputDesde" type="date" />
-    <label for="inputAte">Emitido até (opcional)</label>
-    <input id="inputAte" type="date" />
-  </div>
-
-  <button id="btnBuscar">Buscar</button>
-  <div id="resultadoMsg" class="resultado-msg" style="display:none;"></div>
-  <div id="listaResultados"></div>
-</section>
-
-<script>
-// A guarda de sessão já rodou no <head> (senão a página já teria
-// redirecionado para login antes de renderizar). Aqui SESSAO já é um
-// objeto válido — só usamos para mostrar quem está logado.
-document.getElementById("contaAtual").textContent = `Logado como ${SESSAO.nome} — ${SESSAO.instituicao}`;
-
-document.getElementById("inputBackend").value = "http://localhost:3001";
-
-// Alterna qual bloco de campos aparece conforme o modo de busca escolhido.
-document.querySelectorAll('input[name="modo"]').forEach((radio) => {
-  radio.addEventListener("change", () => {
-    document.querySelectorAll(".campo-modo").forEach((el) => el.classList.remove("ativo"));
-    document.getElementById("campo" + radio.value.charAt(0).toUpperCase() + radio.value.slice(1)).classList.add("ativo");
-  });
-});
-
-async function hashArquivo(file) {
-  const buffer = await file.arrayBuffer();
-  return ethers.keccak256(new Uint8Array(buffer));
-}
-
-// As três rotas de busca devolvem formatos diferentes — normaliza tudo
-// pra uma lista única de objetos { documentId, status, emitidoEm, ... }
-// antes de renderizar, em vez de espalhar essa diferença pelos três modos.
-function normalizarResultado(modo, dados) {
-  if (modo === "id") {
-    if (!dados.registro) return [];
-    return [{ documentId: dados.documentId, ...dados.registro }];
-  }
-  if (modo === "hash") {
-    if (!dados.existe) return [];
-    return [{ documentId: dados.documentId, hashEncontrado: true }];
-  }
-  // modo "filtro"
-  return dados.resultados || [];
-}
-
-function formatarData(valor) {
-  if (valor === undefined || valor === null) return "-";
-  if (typeof valor === "number") {
-    if (valor === 0) return "sem expiração";
-    return new Date(valor * 1000).toLocaleString();
-  }
-  return new Date(valor).toLocaleString();
-}
-
-function renderizarCard(doc, backendUrl) {
-  const linkVerificar = new URL("verificar", window.location.href);
-  linkVerificar.searchParams.set("id", doc.documentId);
-
-  const linkAcessar = new URL("documento", window.location.href);
-  linkAcessar.searchParams.set("id", doc.documentId);
-
-  const statusHtml = doc.status
-    ? `<span class="status-pill status-${doc.status}">${doc.status}</span>`
-    : `<span class="status-pill" style="background:#eee;color:#555;">status desconhecido — confira no link abaixo</span>`;
-
-  const detalhes = [];
-  if (doc.emitidoEm !== undefined) detalhes.push(`Emitido em: ${formatarData(doc.emitidoEm)}`);
-  if (doc.expiraEm !== undefined) detalhes.push(`Expira em: ${formatarData(doc.expiraEm)}`);
-
-  const card = document.createElement("div");
-  card.className = "card-documento";
-  card.innerHTML = `
-    <div class="doc-id">${doc.documentId}</div>
-    ${statusHtml}
-    <div>${detalhes.join(" · ")}</div>
-    <div class="acoes">
-      <a href="${linkVerificar.toString()}" target="_blank">Ver documento</a>
-      <a href="${linkAcessar.toString()}" target="_blank">Acessar documento (Vara)</a>
+  <header class="gs-navbar">
+    <div class="gs-navbar-container">
+      <a href="painel.html" class="gs-brand">
+        <div class="gs-brand-icon" title="Poder Judiciário">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+            <path d="M2 17l10 5 10-5"></path>
+            <path d="M2 12l10 5 10-5"></path>
+          </svg>
+        </div>
+        <div class="gs-brand-info">
+          <h1>VerificaJus <span class="gs-tag-pill">Busca</span></h1>
+          <p>Localização, validação e gestão de documentos sigilosos</p>
+        </div>
+      </a>
+      <div class="gs-navbar-actions">
+        <nav class="gs-nav-tabs">
+          <a href="painel.html" class="gs-nav-tab-item">Painel</a>
+          <a href="buscar.html" class="gs-nav-tab-item active">Buscar</a>
+          <a href="verificar.html" class="gs-nav-tab-item">Validar</a>
+        </nav>
+      </div>
     </div>
-  `;
-  return card;
-}
+  </header>
 
-document.getElementById("btnBuscar").onclick = async () => {
-  const backendUrl = document.getElementById("inputBackend").value.trim().replace(/\/$/, "");
-  const modo = document.querySelector('input[name="modo"]:checked').value;
-  const msgEl = document.getElementById("resultadoMsg");
-  const listaEl = document.getElementById("listaResultados");
-  listaEl.innerHTML = "";
-  msgEl.style.display = "block";
-  msgEl.textContent = "Buscando...";
+  <main class="gs-main-container">
+    <section class="gs-hero">
+      <h2 class="gs-hero-title" id="tituloBusca">Buscar documento</h2>
+      <p class="gs-hero-desc" id="descricaoBusca">
+        Encontre documentos por identificador, por hash do arquivo PDF ou por filtros de status/data.
+      </p>
+      <div class="gs-hero-badges">
+        <span class="gs-badge gs-badge-blue" id="badgeSessao">perfil</span>
+      </div>
+    </section>
 
-  try {
-    let url;
-    let modoEfetivo = modo;
-    if (modo === "id") {
-      const valor = document.getElementById("inputId").value.trim();
-      if (!valor) { msgEl.textContent = "Preencha o identificador."; return; }
-      const id = resolverIdentificadorDocumento(valor);
-      url = `${backendUrl}/api/documentos/busca?id=${id}`;
-    } else if (modo === "hash") {
-      const arquivo = document.getElementById("inputArquivo").files[0];
-      if (!arquivo) { msgEl.textContent = "Escolha um arquivo."; return; }
-      const hash = await hashArquivo(arquivo);
+    <div class="gs-card">
+      <div class="gs-card-header">
+        <div class="gs-card-header-main">
+          <div class="gs-card-icon icon-green">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          </div>
+          <div class="gs-card-title">
+            <h3>Parâmetros de busca</h3>
+            <p>Escolha um modo de consulta</p>
+          </div>
+        </div>
+      </div>
 
-      const respHash = await fetch(`${backendUrl}/api/documentos/busca?hash=${hash}`);
-      const dadosHash = await respHash.json();
-      if (!respHash.ok || !dadosHash.existe) {
-        msgEl.textContent = "Nenhum documento encontrado.";
-        return;
-      }
+      <div class="gs-card-body">
+        <div class="gs-nav-tabs" style="width:fit-content; margin-bottom:1rem;">
+          <label class="gs-nav-tab-item active"><input type="radio" name="modo" value="id" checked /> Identificador</label>
+          <label class="gs-nav-tab-item"><input type="radio" name="modo" value="hash" /> Arquivo</label>
+          <label class="gs-nav-tab-item"><input type="radio" name="modo" value="filtro" /> Status/data</label>
+        </div>
 
-      // Encontrado pelo hash — busca os detalhes completos por id, reaproveitando
-      // a mesma normalização do modo "id" (evita o card ficar com "status
-      // desconhecido", que só a busca por hash isolada não tem como preencher).
-      url = `${backendUrl}/api/documentos/busca?id=${dadosHash.documentId}`;
-      modoEfetivo = "id";
+        <div id="campoId" class="campo-modo ativo">
+          <div class="gs-form-control">
+            <label class="gs-form-label" for="inputId">
+              <span>Identificador do documento</span>
+            </label>
+            <input id="inputId" class="gs-input gs-mono" placeholder="0x... ou alvara-viagem-0001" />
+          </div>
+        </div>
+
+        <div id="campoHash" class="campo-modo">
+          <div class="gs-form-control">
+            <label class="gs-form-label" for="inputArquivo">
+              <span>Documento em PDF</span>
+            </label>
+            <div class="gs-dropzone">
+              <input id="inputArquivo" type="file" accept="application/pdf" />
+              <div class="gs-dropzone-title">Clique ou arraste o PDF</div>
+              <div class="gs-dropzone-desc">O hash é calculado localmente para consulta.</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="campoFiltro" class="campo-modo">
+          <div class="gs-grid-2col">
+            <div class="gs-form-control">
+              <label class="gs-form-label" for="inputStatus"><span>Status</span></label>
+              <select id="inputStatus" class="gs-input">
+                <option value="">Qualquer</option>
+                <option value="Valido">Válido</option>
+                <option value="Expirado">Expirado</option>
+                <option value="Revogado">Revogado</option>
+                <option value="Substituido">Substituído</option>
+              </select>
+            </div>
+            <div class="gs-form-control">
+              <label class="gs-form-label" for="inputDesde"><span>Emitido desde</span></label>
+              <input id="inputDesde" type="date" class="gs-input" />
+            </div>
+            <div class="gs-form-control">
+              <label class="gs-form-label" for="inputAte"><span>Emitido até</span></label>
+              <input id="inputAte" type="date" class="gs-input" />
+            </div>
+          </div>
+        </div>
+
+        <button id="btnBuscar" class="gs-btn gs-btn-primary" style="margin-top:1rem;">Buscar</button>
+        <div id="resultadoMsg" class="gs-alert-banner" style="display:none; margin-top:1rem;"></div>
+        <div id="listaResultados"></div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="gs-footer">
+    <div class="gs-footer-container">
+      <div><strong>VerificaJus Sigilo</strong> &bull; Busca e auditoria</div>
+      <div>Poder Judiciário &bull; República Federativa do Brasil</div>
+    </div>
+  </footer>
+
+  <script>
+    document.getElementById("badgeSessao").textContent = nomePerfil(SESSAO.perfil);
+    if (SESSAO.perfil === "vara") {
+      document.getElementById("tituloBusca").textContent = "Gerenciar e auditar documentos";
+      document.getElementById("descricaoBusca").textContent =
+        "A Vara pode localizar documentos para validar status, auditar acessos, revogar ou substituir por uma nova versão.";
     } else {
-      const params = new URLSearchParams();
-      const status = document.getElementById("inputStatus").value;
-      const desde = document.getElementById("inputDesde").value;
-      const ate = document.getElementById("inputAte").value;
-      if (status) params.set("status", status);
-      if (desde) params.set("desde", desde);
-      if (ate) params.set("ate", ate);
-      if (![...params].length) { msgEl.textContent = "Escolha ao menos um filtro (status ou data)."; return; }
-      url = `${backendUrl}/api/documentos/busca?${params.toString()}`;
+      document.getElementById("tituloBusca").textContent = "Validar documento por busca";
+      document.getElementById("descricaoBusca").textContent =
+        "Perfis verificadores podem localizar um documento e seguir para a validação seletiva.";
     }
 
-    const resp = await fetch(url);
-    const dados = await resp.json();
+    document.querySelectorAll('input[name="modo"]').forEach((radio) => {
+      radio.addEventListener("change", () => {
+        document.querySelectorAll(".campo-modo").forEach((el) => el.classList.remove("ativo"));
+        document.querySelectorAll(".gs-nav-tab-item").forEach((el) => el.classList.remove("active"));
+        radio.closest(".gs-nav-tab-item").classList.add("active");
+        document.getElementById("campo" + radio.value.charAt(0).toUpperCase() + radio.value.slice(1)).classList.add("ativo");
+      });
+    });
 
-    if (!resp.ok) {
-      msgEl.textContent = "Nada encontrado: " + (dados.erro || `HTTP ${resp.status}`);
-      return;
+    async function hashArquivo(file) {
+      const buffer = await file.arrayBuffer();
+      return ethers.keccak256(new Uint8Array(buffer));
     }
 
-    const resultados = normalizarResultado(modoEfetivo, dados);
-    if (resultados.length === 0) {
-      msgEl.textContent = "Nenhum documento encontrado.";
-      return;
+    function normalizarResultado(modo, dados) {
+      if (modo === "id") {
+        if (!dados.registro) return [];
+        return [{ documentId: dados.documentId, ...dados.registro }];
+      }
+      if (modo === "hash") {
+        if (!dados.existe) return [];
+        return [{ documentId: dados.documentId, hashEncontrado: true }];
+      }
+      return dados.resultados || [];
     }
 
-    msgEl.textContent = `${resultados.length} documento(s) encontrado(s).`;
-    resultados.forEach((doc) => listaEl.appendChild(renderizarCard(doc, backendUrl)));
-  } catch (err) {
-    msgEl.textContent = "Erro na busca: " + (err?.message || String(err));
-  }
-};
-</script>
+    function formatarData(valor) {
+      if (valor === undefined || valor === null) return "-";
+      if (typeof valor === "number") {
+        if (valor === 0) return "sem expiração";
+        return new Date(valor * 1000).toLocaleString();
+      }
+      return new Date(valor).toLocaleString();
+    }
+
+    function renderizarCard(doc) {
+      const linkVerificar = new URL("verificar.html", window.location.href);
+      linkVerificar.searchParams.set("id", doc.documentId);
+
+      const linkAcessar = new URL("documento.html", window.location.href);
+      linkAcessar.searchParams.set("id", doc.documentId);
+
+      const badgeClasse = doc.status === "Valido" ? "gs-badge-green" : doc.status === "Expirado" ? "gs-badge-gold" : "gs-badge-blue";
+      const detalhes = [];
+      if (doc.emitidoEm !== undefined) detalhes.push(`Emitido em: ${formatarData(doc.emitidoEm)}`);
+      if (doc.expiraEm !== undefined) detalhes.push(`Expira em: ${formatarData(doc.expiraEm)}`);
+      const linkGestao = SESSAO.perfil === "vara"
+        ? `<a href="${linkAcessar.toString()}" class="gs-btn gs-btn-secondary">Gerenciar</a>`
+        : "";
+
+      const card = document.createElement("div");
+      card.className = "gs-card doc-card";
+      card.innerHTML = `
+        <div class="gs-card-header">
+          <div class="gs-card-header-main">
+            <div class="gs-card-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V4h16v3"></path><path d="M9 20h6"></path><path d="M12 4v16"></path></svg>
+            </div>
+            <div class="gs-card-title">
+              <h3>Documento encontrado</h3>
+              <p class="gs-mono mono-break">${doc.documentId}</p>
+            </div>
+          </div>
+          <span class="gs-badge ${badgeClasse}">${doc.status || "status desconhecido"}</span>
+        </div>
+        <div class="gs-card-body">
+          <p style="font-size:0.9rem; color:var(--gs-text-muted);">${detalhes.join(" | ") || "Abra a validação para confirmar o status ao vivo."}</p>
+          <div style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-top:0.75rem;">
+            <a href="${linkVerificar.toString()}" class="gs-btn gs-btn-primary">Validar documento</a>
+            ${linkGestao}
+          </div>
+        </div>
+      `;
+      return card;
+    }
+
+    document.getElementById("btnBuscar").onclick = async () => {
+      const backendUrl = obterBackendPadrao().replace(/\/$/, "");
+      const modo = document.querySelector('input[name="modo"]:checked').value;
+      const msgEl = document.getElementById("resultadoMsg");
+      const listaEl = document.getElementById("listaResultados");
+      listaEl.innerHTML = "";
+      msgEl.style.display = "flex";
+      msgEl.className = "gs-alert-banner";
+      msgEl.textContent = "Buscando...";
+
+      try {
+        let url;
+        let modoEfetivo = modo;
+        if (modo === "id") {
+          const valor = document.getElementById("inputId").value.trim();
+          if (!valor) { msgEl.textContent = "Preencha o identificador."; return; }
+          const id = resolverIdentificadorDocumento(valor);
+          url = `${backendUrl}/api/documentos/busca?id=${id}`;
+        } else if (modo === "hash") {
+          const arquivo = document.getElementById("inputArquivo").files[0];
+          if (!arquivo) { msgEl.textContent = "Escolha um arquivo."; return; }
+          const hash = await hashArquivo(arquivo);
+          const respHash = await fetch(`${backendUrl}/api/documentos/busca?hash=${hash}`);
+          const dadosHash = await respHash.json();
+          if (!respHash.ok || !dadosHash.existe) {
+            msgEl.textContent = "Nenhum documento encontrado.";
+            return;
+          }
+          url = `${backendUrl}/api/documentos/busca?id=${dadosHash.documentId}`;
+          modoEfetivo = "id";
+        } else {
+          const params = new URLSearchParams();
+          const status = document.getElementById("inputStatus").value;
+          const desde = document.getElementById("inputDesde").value;
+          const ate = document.getElementById("inputAte").value;
+          if (status) params.set("status", status);
+          if (desde) params.set("desde", desde);
+          if (ate) params.set("ate", ate);
+          if (![...params].length) { msgEl.textContent = "Escolha ao menos um filtro."; return; }
+          url = `${backendUrl}/api/documentos/busca?${params.toString()}`;
+        }
+
+        const resp = await fetch(url);
+        const dados = await resp.json();
+        if (!resp.ok) {
+          msgEl.className = "gs-alert-banner failure";
+          msgEl.textContent = "Nada encontrado: " + (dados.erro || `HTTP ${resp.status}`);
+          return;
+        }
+
+        const resultados = normalizarResultado(modoEfetivo, dados);
+        if (resultados.length === 0) {
+          msgEl.textContent = "Nenhum documento encontrado.";
+          return;
+        }
+
+        msgEl.className = "gs-alert-banner success";
+        msgEl.textContent = `${resultados.length} documento(s) encontrado(s).`;
+        resultados.forEach((doc) => listaEl.appendChild(renderizarCard(doc)));
+      } catch (err) {
+        msgEl.className = "gs-alert-banner failure";
+        msgEl.textContent = "Erro na busca: " + (err?.message || String(err));
+      }
+    };
+  </script>
 </body>
 </html>

@@ -1,148 +1,167 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8" />
-<title>VerificaJus Sigilo — Login</title>
-<style>
-  :root { color-scheme: light; }
-  body {
-    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-    max-width: 720px;
-    margin: 2rem auto;
-    padding: 0 1rem;
-    color: #1c1c1c;
-    background: #fafafa;
-  }
-  h1 { font-size: 1.3rem; margin-bottom: 0; }
-  p.subtitulo { color: #555; font-size: 0.9rem; margin-top: 0.3rem; }
-  section {
-    background: white;
-    border: 1px solid #e2e2e2;
-    border-radius: 10px;
-    padding: 1rem 1.25rem;
-    margin-bottom: 1.25rem;
-  }
-  section h2 { font-size: 1rem; margin-top: 0; }
-  label { display: block; font-size: 0.85rem; margin: 0.6rem 0 0.2rem; color: #444; }
-  input {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 0.45rem 0.6rem;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    font-size: 0.9rem;
-  }
-  button {
-    margin-top: 0.8rem;
-    padding: 0.55rem 1.1rem;
-    border: none;
-    border-radius: 6px;
-    background: #1f2933;
-    color: white;
-    font-size: 0.85rem;
-    cursor: pointer;
-  }
-  button.secundario { background: #52606d; }
-  button:disabled { background: #b0b7bd; cursor: not-allowed; }
-  .resultado {
-    margin-top: 0.8rem;
-    padding: 0.7rem;
-    background: #f4f6f7;
-    border-radius: 6px;
-    font-size: 0.82rem;
-    white-space: pre-wrap;
-    word-break: break-all;
-  }
-  .aviso {
-    background: #fff4e5;
-    border: 1px solid #f0c36d;
-    padding: 0.7rem 1rem;
-    border-radius: 8px;
-    font-size: 0.82rem;
-    margin: 1rem 0 1.5rem;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VerificaJus Sigilo - Login Judicial</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="util.js"></script>
 </head>
 <body>
+  <div class="gs-federal-stripe"></div>
 
-<h1>VerificaJus Sigilo — Login</h1>
-<p class="subtitulo">Acesso ao painel por email e senha. Este login só identifica quem está
-navegando (mostra o nome na tela) — ações sensíveis (registrar/revogar, Nível 2) continuam
-pedindo a carteira à parte, e quem autoriza é sempre a blockchain.</p>
+  <header class="gs-navbar">
+    <div class="gs-navbar-container">
+      <a href="login.html" class="gs-brand">
+        <div class="gs-brand-icon" title="Poder Judiciário">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+            <path d="M2 17l10 5 10-5"></path>
+            <path d="M2 12l10 5 10-5"></path>
+          </svg>
+        </div>
+        <div class="gs-brand-info">
+          <h1>VerificaJus <span class="gs-tag-pill">Acesso</span></h1>
+          <p>Poder Judiciário &bull; Vara da Infância e da Juventude</p>
+        </div>
+      </a>
+    </div>
+  </header>
 
-<div class="aviso">
-  Ferramenta de <strong>desenvolvimento/teste</strong>. Conta de exemplo já semeada no banco:
-  <strong>juiz.exemplo@tjpb.jus.br</strong> / <strong>senha123</strong>.
-</div>
+  <main class="gs-main-container" style="max-width: 760px; margin: 3rem auto;">
+    <section class="gs-hero" style="padding: 2rem;">
+      <h2 class="gs-hero-title" style="font-size: 1.75rem;">Selecione o perfil de acesso</h2>
+      <p class="gs-hero-desc">
+        A Vara administra documentos. Polícia Federal, companhia aérea e Conselho Tutelar validam documentos e recebem somente as informações autorizadas para seu perfil.
+      </p>
+    </section>
 
-<section>
-  <h2>Configuração</h2>
-  <label for="inputBackend">URL do backend</label>
-  <input id="inputBackend" placeholder="http://localhost:3001" />
-</section>
+    <div class="gs-card" style="margin-bottom: 1.5rem;">
+      <div class="gs-card-header">
+        <div class="gs-card-header-main">
+          <div class="gs-card-icon icon-gold">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          </div>
+          <div class="gs-card-title">
+            <h3>Entrar como usuário de demonstração</h3>
+            <p>Todos usam a senha <code>senha123</code></p>
+          </div>
+        </div>
+      </div>
+      <div class="gs-card-body">
+        <div class="gs-grid-2col">
+          <button class="gs-btn gs-btn-primary perfil-btn" data-email="juiz.exemplo@tjpb.jus.br" style="justify-content:flex-start;">
+            Vara - administrador
+          </button>
+          <button class="gs-btn gs-btn-secondary perfil-btn" data-email="pf.exemplo@dpf.gov.br" style="justify-content:flex-start;">
+            Polícia Federal
+          </button>
+          <button class="gs-btn gs-btn-secondary perfil-btn" data-email="aerea.exemplo@companhia.demo" style="justify-content:flex-start;">
+            Companhia Aérea
+          </button>
+          <button class="gs-btn gs-btn-secondary perfil-btn" data-email="conselho.exemplo@ct.demo" style="justify-content:flex-start;">
+            Conselho Tutelar
+          </button>
+        </div>
+      </div>
+    </div>
 
-<section>
-  <h2>Entrar</h2>
-  <label for="inputEmail">Email</label>
-  <input id="inputEmail" type="email" placeholder="voce@tribunal.jus.br" />
-  <label for="inputSenha">Senha</label>
-  <input id="inputSenha" type="password" placeholder="sua senha" />
-  <button id="btnEntrar">Entrar</button>
-  <div id="resultado" class="resultado" style="display:none;"></div>
-</section>
+    <div class="gs-card">
+      <div class="gs-card-header">
+        <div class="gs-card-header-main">
+          <div class="gs-card-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
+          </div>
+          <div class="gs-card-title">
+            <h3>Entrar manualmente</h3>
+            <p>Use credenciais institucionais cadastradas no sistema</p>
+          </div>
+        </div>
+      </div>
 
-<script>
-// Chave única de sessão do painel — mesma string lida por painel.
-const CHAVE_SESSAO = "verificajus_sessao";
+      <div class="gs-card-body">
+        <div class="gs-form-control">
+          <label class="gs-form-label" for="inputEmail">
+            <span>Email</span>
+          </label>
+          <input id="inputEmail" type="email" class="gs-input" placeholder="juiz.exemplo@tjpb.jus.br" />
+        </div>
 
-document.getElementById("inputBackend").value = "http://localhost:3001";
+        <div class="gs-form-control">
+          <label class="gs-form-label" for="inputSenha">
+            <span>Senha</span>
+          </label>
+          <input id="inputSenha" type="password" class="gs-input" placeholder="senha" />
+        </div>
 
-function mostrarErro(texto) {
-  const el = document.getElementById("resultado");
-  el.style.display = "block";
-  el.textContent = texto;
-}
+        <button id="btnEntrar" class="gs-btn gs-btn-primary" style="width:100%; margin-top:0.5rem;">Entrar no sistema</button>
+        <div id="resultado" class="gs-alert-banner failure" style="display:none; margin-top:1rem;"></div>
+      </div>
+    </div>
+  </main>
 
-async function entrar() {
-  const backendUrl = document.getElementById("inputBackend").value.trim().replace(/\/$/, "");
-  const email = document.getElementById("inputEmail").value.trim();
-  const senha = document.getElementById("inputSenha").value;
+  <footer class="gs-footer">
+    <div class="gs-footer-container">
+      <div><strong>VerificaJus Sigilo</strong> &bull; Sistema de autenticação</div>
+      <div>Poder Judiciário &bull; República Federativa do Brasil</div>
+    </div>
+  </footer>
 
-  if (!email || !senha) {
-    return mostrarErro("Preencha email e senha.");
-  }
+  <script>
+    const CHAVE_SESSAO = "verificajus_sessao";
+    const SENHA_DEMO = "senha123";
 
-  try {
-    const resp = await fetch(`${backendUrl}/api/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, senha }),
-    });
-    const dados = await resp.json();
-
-    if (!resp.ok) {
-      // A API devolve a mensagem no campo `erro` (400 ou 401).
-      mostrarErro(dados.erro || "Não foi possível entrar.");
-      return;
+    function mostrarErro(texto) {
+      const el = document.getElementById("resultado");
+      el.style.display = "flex";
+      el.textContent = texto;
     }
 
-    // Guarda só o essencial da sessão (token + identidade para exibição).
-    sessionStorage.setItem(
-      CHAVE_SESSAO,
-      JSON.stringify({ token: dados.token, nome: dados.nome, instituicao: dados.instituicao })
-    );
-    window.location.href = "painel";
-  } catch (err) {
-    mostrarErro("Falha ao contatar o backend: " + (err?.message || String(err)));
-  }
-}
+    async function entrar() {
+      const backendUrl = obterBackendPadrao().replace(/\/$/, "");
+      const email = document.getElementById("inputEmail").value.trim();
+      const senha = document.getElementById("inputSenha").value;
 
-document.getElementById("btnEntrar").onclick = entrar;
+      if (!email || !senha) return mostrarErro("Preencha email e senha.");
 
-// Comodidade: Enter no campo de senha também entra (sem <form>, sem reload).
-document.getElementById("inputSenha").addEventListener("keydown", (ev) => {
-  if (ev.key === "Enter") entrar();
-});
-</script>
+      try {
+        const resp = await fetch(`${backendUrl}/api/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, senha }),
+        });
+        const dados = await resp.json();
+
+        if (!resp.ok) return mostrarErro(dados.erro || "Não foi possível entrar.");
+
+        sessionStorage.setItem(
+          CHAVE_SESSAO,
+          JSON.stringify(normalizarPerfilSessao({
+            token: dados.token,
+            email,
+            nome: dados.nome,
+            instituicao: dados.instituicao,
+            perfil: dados.perfil,
+          }))
+        );
+        window.location.href = "painel.html";
+      } catch (err) {
+        mostrarErro("Falha ao contatar o backend: " + (err?.message || String(err)));
+      }
+    }
+
+    document.querySelectorAll(".perfil-btn").forEach((botao) => {
+      botao.addEventListener("click", () => {
+        document.getElementById("inputEmail").value = botao.dataset.email;
+        document.getElementById("inputSenha").value = SENHA_DEMO;
+        entrar();
+      });
+    });
+
+    document.getElementById("btnEntrar").onclick = entrar;
+    document.getElementById("inputSenha").addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter") entrar();
+    });
+  </script>
 </body>
 </html>

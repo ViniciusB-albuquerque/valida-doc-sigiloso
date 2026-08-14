@@ -14,9 +14,9 @@ if (!JWT_SECRET) {
 
 // Login tradicional — email + senha, hash conferido via bcrypt.
 //
-// O QUE ESTE TOKEN NÃO FAZ: não carrega papel nem endereço de carteira, e
-// não libera NENHUMA ação sensível sozinho. É só identidade de sessão pro
-// painel (mostrar nome/instituição, nada mais). Toda ação que importa
+// O QUE ESTE TOKEN NÃO FAZ: não carrega endereço de carteira e não libera
+// NENHUMA ação sensível sozinho. É só identidade de sessão pro painel
+// (mostrar nome/instituição/perfil de demo). Toda ação que importa
 // (registrar/revogar documento, ver Nível 2) continua pedindo a carteira
 // separadamente, no momento em que a pessoa tenta fazer aquilo — e quem
 // decide se é permitido é sempre a blockchain (onlyVara no contrato, ou o
@@ -35,7 +35,7 @@ router.post("/login", (req, res) => {
     return res.status(401).json({ erro: "Email ou senha incorretos." });
   }
 
-  const payload = { nome: conta.nome, instituicao: conta.instituicao };
+  const payload = { nome: conta.nome, instituicao: conta.instituicao, perfil: conta.perfil };
   const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRACAO });
 
   res.json({ token, ...payload, expiraEm: JWT_EXPIRACAO });

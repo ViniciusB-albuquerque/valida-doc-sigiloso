@@ -5,6 +5,8 @@ const blockchain = require("../blockchain");
 const {
   buscarIdentidade,
   estaAutorizado,
+  buscarDadosDocumento,
+  filtrarDadosDocumentoPorPerfil,
   reconstruirCadeia,
   buscarDocumentosIndexadosPorData,
 } = require("../db");
@@ -218,7 +220,10 @@ router.post("/:documentId/acesso", validarDocumentId, async (req, res) => {
     );
 
     const registro = await blockchain.obterRegistro(req.params.documentId);
+    const identidadeVerificador = buscarIdentidade(endereco);
     const identidadeEmissor = buscarIdentidade(registro.emissor);
+    const dadosOffchain = buscarDadosDocumento(req.params.documentId);
+    const dadosLiberados = filtrarDadosDocumentoPorPerfil(dadosOffchain, identidadeVerificador?.perfil);
 
     res.json({
       registro: {
@@ -226,6 +231,13 @@ router.post("/:documentId/acesso", validarDocumentId, async (req, res) => {
         emissorNome: identidadeEmissor?.nome ?? null,
         emissorInstituicao: identidadeEmissor?.instituicao ?? null,
       },
+      verificador: {
+        endereco,
+        nome: identidadeVerificador?.nome ?? null,
+        instituicao: identidadeVerificador?.instituicao ?? null,
+        perfil: identidadeVerificador?.perfil ?? "verificador",
+      },
+      dadosLiberados,
       acessoRegistrado: { txHash, blockNumber, assinaturaHash },
       mensagemAssinada,
     });
