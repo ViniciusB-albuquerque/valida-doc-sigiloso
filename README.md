@@ -10,9 +10,10 @@ Plataforma de validacao seletiva de documentos judiciais sigilosos por QR Code.
 - Validacao publica rapida via backend: o leitor do QR ve se o documento e valido, expirado, revogado ou substituido.
 - Acesso detalhado com carteira cadastrada, assinatura sem gas e registro on-chain do acesso.
 - Filtragem off-chain por perfil:
-  - `policia_federal`: dados de viagem, crianca/adolescente, responsavel e acompanhante.
-  - `companhia_aerea`: dados operacionais de embarque, sem medidas protetivas.
-  - `conselho_tutelar`: dados de protecao/acompanhamento, sem destino quando nao pertinente.
+  - `policia_federal`: `N3 - Validacao migratoria completa`, com dados de viagem, crianca/adolescente, responsavel e acompanhante.
+  - `companhia_aerea`: `N2 - Conferencia operacional de embarque`, com dados operacionais de embarque e sem medidas protetivas.
+  - `conselho_tutelar`: `N3 - Protecao e acompanhamento`, com dados de protecao/acompanhamento e sem destino quando nao pertinente.
+  - `vara`: `N4 - Administracao integral`, com todos os metadados off-chain cadastrados.
 - Painel administrativo da Vara para registrar e revogar documentos.
 
 ## Como rodar
@@ -38,13 +39,24 @@ npm install
 npm run dev
 ```
 
-Sirva a interface:
+O proprio backend serve a API e o front estatico. Acesse:
 
-```bash
-npx serve interface
+```text
+http://localhost:3001/login
+http://localhost:3001/painel
+http://localhost:3001/verificar
 ```
 
+Ainda e possivel servir `interface/` separadamente para testes, mas o fluxo integrado recomendado e abrir as telas pelo backend.
+
 ## Demo de perfis
+
+Logins de demonstracao no painel, todos com senha `senha123`:
+
+- Vara: `juiz.exemplo@tjpb.jus.br`
+- Policia Federal: `pf.exemplo@dpf.gov.br`
+- Companhia Aerea: `aerea.exemplo@companhia.demo`
+- Conselho Tutelar: `conselho.exemplo@ct.demo`
 
 Enderecos Hardhat cadastrados no seed:
 

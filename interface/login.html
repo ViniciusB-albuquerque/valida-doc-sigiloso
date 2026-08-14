@@ -2,6 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8" />
+<script src="util.js"></script>
 <title>VerificaJus Sigilo — Login</title>
 <style>
   :root { color-scheme: light; }
@@ -61,6 +62,26 @@
     font-size: 0.82rem;
     margin: 1rem 0 1.5rem;
   }
+  .perfis-demo {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.75rem;
+  }
+  .perfil-btn {
+    width: 100%;
+    text-align: left;
+    background: #26323f;
+  }
+  .perfil-btn strong {
+    display: block;
+    font-size: 0.92rem;
+  }
+  .perfil-btn span {
+    display: block;
+    margin-top: 0.2rem;
+    color: #d9e2ec;
+    font-size: 0.76rem;
+  }
 </style>
 </head>
 <body>
@@ -71,8 +92,9 @@ navegando (mostra o nome na tela) — ações sensíveis (registrar/revogar, Ní
 pedindo a carteira à parte, e quem autoriza é sempre a blockchain.</p>
 
 <div class="aviso">
-  Ferramenta de <strong>desenvolvimento/teste</strong>. Conta de exemplo já semeada no banco:
-  <strong>juiz.exemplo@tjpb.jus.br</strong> / <strong>senha123</strong>.
+  Ferramenta de <strong>desenvolvimento/teste</strong>. Use os botoes de perfil para entrar
+  como Vara, Policia Federal, Companhia Aerea ou Conselho Tutelar. Todos usam a senha
+  <strong>senha123</strong>.
 </div>
 
 <section>
@@ -82,7 +104,29 @@ pedindo a carteira à parte, e quem autoriza é sempre a blockchain.</p>
 </section>
 
 <section>
-  <h2>Entrar</h2>
+  <h2>Entrar como</h2>
+  <div class="perfis-demo">
+    <button class="perfil-btn" data-email="juiz.exemplo@tjpb.jus.br">
+      <strong>Vara</strong>
+      <span>Administra emissao, revogacao e auditoria.</span>
+    </button>
+    <button class="perfil-btn" data-email="pf.exemplo@dpf.gov.br">
+      <strong>Policia Federal</strong>
+      <span>Valida autorizacao migratoria completa.</span>
+    </button>
+    <button class="perfil-btn" data-email="aerea.exemplo@companhia.demo">
+      <strong>Companhia Aerea</strong>
+      <span>Confere dados operacionais de embarque.</span>
+    </button>
+    <button class="perfil-btn" data-email="conselho.exemplo@ct.demo">
+      <strong>Conselho Tutelar</strong>
+      <span>Acessa dados de protecao e acompanhamento.</span>
+    </button>
+  </div>
+</section>
+
+<section>
+  <h2>Entrar manualmente</h2>
   <label for="inputEmail">Email</label>
   <input id="inputEmail" type="email" placeholder="voce@tribunal.jus.br" />
   <label for="inputSenha">Senha</label>
@@ -94,8 +138,9 @@ pedindo a carteira à parte, e quem autoriza é sempre a blockchain.</p>
 <script>
 // Chave única de sessão do painel — mesma string lida por painel.
 const CHAVE_SESSAO = "verificajus_sessao";
+const SENHA_DEMO = "senha123";
 
-document.getElementById("inputBackend").value = "http://localhost:3001";
+document.getElementById("inputBackend").value = obterBackendPadrao();
 
 function mostrarErro(texto) {
   const el = document.getElementById("resultado");
@@ -129,7 +174,7 @@ async function entrar() {
     // Guarda só o essencial da sessão (token + identidade para exibição).
     sessionStorage.setItem(
       CHAVE_SESSAO,
-      JSON.stringify({ token: dados.token, nome: dados.nome, instituicao: dados.instituicao })
+      JSON.stringify({ token: dados.token, nome: dados.nome, instituicao: dados.instituicao, perfil: dados.perfil })
     );
     window.location.href = "painel";
   } catch (err) {
@@ -138,6 +183,14 @@ async function entrar() {
 }
 
 document.getElementById("btnEntrar").onclick = entrar;
+
+document.querySelectorAll(".perfil-btn").forEach((botao) => {
+  botao.addEventListener("click", () => {
+    document.getElementById("inputEmail").value = botao.dataset.email;
+    document.getElementById("inputSenha").value = SENHA_DEMO;
+    entrar();
+  });
+});
 
 // Comodidade: Enter no campo de senha também entra (sem <form>, sem reload).
 document.getElementById("inputSenha").addEventListener("keydown", (ev) => {

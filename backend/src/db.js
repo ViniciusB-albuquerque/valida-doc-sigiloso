@@ -25,6 +25,75 @@ if (tabelaExiste("identidades") && !colunaExiste("identidades", "perfil")) {
   db.exec("ALTER TABLE identidades ADD COLUMN perfil TEXT NOT NULL DEFAULT 'verificador'");
 }
 
+const POLITICAS_VISIBILIDADE = {
+  policia_federal: {
+    nivel: "N3 - Validacao migratoria completa",
+    descricao: "Pode ver os dados necessarios para confirmar embarque internacional, responsavel, acompanhante e destino.",
+    campos: [
+      "tipoDocumento",
+      "numeroControle",
+      "autorizacaoResumo",
+      "nomeCrianca",
+      "responsavelLegal",
+      "acompanhante",
+      "destino",
+      "periodoViagem",
+    ],
+  },
+  companhia_aerea: {
+    nivel: "N2 - Conferencia operacional de embarque",
+    descricao: "Pode ver somente os dados necessarios para decidir se o embarque deve ser aceito.",
+    campos: [
+      "tipoDocumento",
+      "numeroControle",
+      "autorizacaoResumo",
+      "nomeCrianca",
+      "acompanhante",
+      "destino",
+      "periodoViagem",
+    ],
+  },
+  conselho_tutelar: {
+    nivel: "N3 - Protecao e acompanhamento",
+    descricao: "Pode ver dados necessarios para acompanhamento protetivo, sem receber detalhes de viagem quando nao forem pertinentes.",
+    campos: [
+      "tipoDocumento",
+      "numeroControle",
+      "autorizacaoResumo",
+      "nomeCrianca",
+      "responsavelLegal",
+      "medidasProtecao",
+      "contatoInstitucional",
+    ],
+  },
+  vara: {
+    nivel: "N4 - Administracao integral",
+    descricao: "Pode ver todos os metadados off-chain cadastrados para emitir, auditar, revogar ou substituir o documento.",
+    campos: [
+      "documentId",
+      "tipoDocumento",
+      "numeroControle",
+      "nomeCrianca",
+      "responsavelLegal",
+      "acompanhante",
+      "destino",
+      "periodoViagem",
+      "autorizacaoResumo",
+      "medidasProtecao",
+      "contatoInstitucional",
+    ],
+  },
+  verificador: {
+    nivel: "N1 - Autenticidade publica",
+    descricao: "Pode ver somente a autenticidade/status publico do documento, sem dados sensiveis off-chain.",
+    campos: ["tipoDocumento", "numeroControle", "autorizacaoResumo"],
+  },
+};
+
+function politicaVisibilidadePorPerfil(perfil) {
+  return POLITICAS_VISIBILIDADE[perfil] || POLITICAS_VISIBILIDADE.verificador;
+}
+
 // Roda os seeds toda vez que o servidor sobe — são idempotentes (CREATE TABLE
 // IF NOT EXISTS + INSERT OR IGNORE), então não duplicam nem falham se já
 // rodaram antes. seed.sql = dados de identidades/dados off-chain; seed-indexador.sql =
@@ -77,49 +146,25 @@ function buscarDadosDocumento(documentId) {
  * quais campos off-chain podem ser revelados a quem assinou o acesso.
  */
 function filtrarDadosDocumentoPorPerfil(dados, perfil) {
+  const politica = politicaVisibilidadePorPerfil(perfil);
+
   if (!dados) {
     return {
-      aviso: "Documento autenticado na blockchain, mas sem metadados off-chain cadastrados nesta demo.",
+      nivel: politica.nivel,
+      descricao: politica.descricao,
+      camposPermitidos: [],
+      dados: {
+        aviso: "Documento autenticado na blockchain, mas sem metadados off-chain cadastrados nesta demo.",
+      },
     };
   }
 
-  const comum = {
-    tipoDocumento: dados.tipoDocumento,
-    numeroControle: dados.numeroControle,
-    autorizacaoResumo: dados.autorizacaoResumo,
+  return {
+    nivel: politica.nivel,
+    descricao: politica.descricao,
+    camposPermitidos: politica.campos,
+    dados: Object.fromEntries(politica.campos.map((campo) => [campo, dados[campo]])),
   };
-
-  switch (perfil) {
-    case "policia_federal":
-      return {
-        ...comum,
-        nomeCrianca: dados.nomeCrianca,
-        responsavelLegal: dados.responsavelLegal,
-        acompanhante: dados.acompanhante,
-        destino: dados.destino,
-        periodoViagem: dados.periodoViagem,
-      };
-    case "companhia_aerea":
-      return {
-        ...comum,
-        nomeCrianca: dados.nomeCrianca,
-        acompanhante: dados.acompanhante,
-        destino: dados.destino,
-        periodoViagem: dados.periodoViagem,
-      };
-    case "conselho_tutelar":
-      return {
-        ...comum,
-        nomeCrianca: dados.nomeCrianca,
-        responsavelLegal: dados.responsavelLegal,
-        medidasProtecao: dados.medidasProtecao,
-        contatoInstitucional: dados.contatoInstitucional,
-      };
-    case "vara":
-      return dados;
-    default:
-      return comum;
-  }
 }
 
 // --- Estado do indexador (Etapa 4) -----------------------------------------
@@ -222,6 +267,7 @@ module.exports = {
   estaAutorizado,
   buscarDadosDocumento,
   filtrarDadosDocumentoPorPerfil,
+  politicaVisibilidadePorPerfil,
   getEstadoIndexador,
   setEstadoIndexador,
   registrarDocumentoIndexado,

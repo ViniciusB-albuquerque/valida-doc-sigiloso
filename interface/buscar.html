@@ -115,8 +115,8 @@ try {
 
 <div class="aviso">
   Ferramenta de <strong>desenvolvimento/teste</strong>. Cada resultado oferece dois caminhos:
-  "Ver documento" (verificação pública, Nível 1 — e Nível 2 se você conectar carteira lá) e
-  "Acessar documento" (Nível 3, só funciona se você for a Vara).
+  "Validar documento" para qualquer perfil autorizado e, apenas para a Vara,
+  "Gerenciar" para revogar, substituir e auditar.
 </div>
 
 <section>
@@ -169,7 +169,7 @@ try {
 // objeto válido — só usamos para mostrar quem está logado.
 document.getElementById("contaAtual").textContent = `Logado como ${SESSAO.nome} — ${SESSAO.instituicao}`;
 
-document.getElementById("inputBackend").value = "http://localhost:3001";
+document.getElementById("inputBackend").value = obterBackendPadrao();
 
 // Alterna qual bloco de campos aparece conforme o modo de busca escolhido.
 document.querySelectorAll('input[name="modo"]').forEach((radio) => {
@@ -223,6 +223,9 @@ function renderizarCard(doc, backendUrl) {
   const detalhes = [];
   if (doc.emitidoEm !== undefined) detalhes.push(`Emitido em: ${formatarData(doc.emitidoEm)}`);
   if (doc.expiraEm !== undefined) detalhes.push(`Expira em: ${formatarData(doc.expiraEm)}`);
+  const linkGestao = SESSAO.perfil === "vara"
+    ? `<a href="${linkAcessar.toString()}" target="_blank">Gerenciar (Vara)</a>`
+    : "";
 
   const card = document.createElement("div");
   card.className = "card-documento";
@@ -231,8 +234,8 @@ function renderizarCard(doc, backendUrl) {
     ${statusHtml}
     <div>${detalhes.join(" · ")}</div>
     <div class="acoes">
-      <a href="${linkVerificar.toString()}" target="_blank">Ver documento</a>
-      <a href="${linkAcessar.toString()}" target="_blank">Acessar documento (Vara)</a>
+      <a href="${linkVerificar.toString()}" target="_blank">Validar documento</a>
+      ${linkGestao}
     </div>
   `;
   return card;

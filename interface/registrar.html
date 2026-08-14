@@ -7,11 +7,15 @@
 <script src="util.js"></script>
 <script>
 const CHAVE_SESSAO = "verificajus_sessao";
+var SESSAO = null;
 try {
   const bruto = sessionStorage.getItem(CHAVE_SESSAO);
-  const sessao = bruto ? JSON.parse(bruto) : null;
-  if (!sessao || typeof sessao !== "object") {
+  SESSAO = bruto ? JSON.parse(bruto) : null;
+  if (!SESSAO || typeof SESSAO !== "object") {
     window.location.href = "login";
+  }
+  if (SESSAO.perfil !== "vara") {
+    window.location.href = "verificar";
   }
 } catch (err) {
   window.location.href = "login";
@@ -140,6 +144,12 @@ if (window.ethereum) {
 }
 
 const CHAIN_ID_ESPERADO = 1337n;
+
+carregarConfigBackend()
+  .then((config) => {
+    document.getElementById("inputEndereco").value = config.contratoEndereco;
+  })
+  .catch((err) => console.warn("Nao foi possivel carregar config do backend:", err));
 
 async function hashArquivo(file) {
   const buffer = await file.arrayBuffer();

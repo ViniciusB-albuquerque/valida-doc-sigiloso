@@ -82,6 +82,16 @@
     border: 1px solid #a9dcb8;
     color: #1a7a3d;
   }
+  .scanner {
+    margin-top: 0.8rem;
+    display: none;
+  }
+  .scanner video {
+    width: 100%;
+    max-height: 360px;
+    background: #111;
+    border-radius: 8px;
+  }
 </style>
 </head>
 <body>
@@ -101,6 +111,12 @@
   <label for="inputId">Identificador do documento</label>
   <input id="inputId" placeholder="0x... ou rotulo interno" />
   <button id="btnConsultarPublico">Validar agora</button>
+  <button id="btnLerQr" class="secundario">Ler QR pela camera</button>
+  <div id="scannerQr" class="scanner">
+    <video id="videoQr" playsinline muted></video>
+    <button id="btnPararQr" class="secundario">Parar camera</button>
+    <div id="resultadoQr" class="resultado" style="display:none;"></div>
+  </div>
   <div id="statusGrande" class="status-grande" style="display:none;"></div>
   <p id="statusDescricao" class="status-descricao" style="display:none;"></p>
   <div id="resultadoPublico" class="resultado" style="display:none;"></div>
@@ -127,13 +143,15 @@
 const CHAIN_ID_ESPERADO = 1337n;
 let providerCarteira, signer;
 let documentIdAtual = null;
+let scannerStream = null;
+let scannerAtivo = false;
 
 // Preenche o identificador a partir da URL, ex.: verificar?id=0x...
 // Este é o fluxo do QR Code: ele carrega somente o documentId. O backend,
 // já configurado com RPC e endereço do contrato, faz a consulta on-chain.
 const params = new URLSearchParams(window.location.search);
 document.getElementById("inputId").value = params.get("id") || "";
-document.getElementById("inputBackend").value = params.get("backend") || "http://localhost:3001";
+document.getElementById("inputBackend").value = obterBackendPadrao();
 
 if (window.ethereum) {
   window.ethereum.on("accountsChanged", () => window.location.reload());
@@ -148,6 +166,15 @@ function mostrar(id, texto) {
   const el = document.getElementById(id);
   el.style.display = "block";
   el.textContent = texto;
+}
+
+function extrairIdDoQr(textoQr) {
+  try {
+    const url = new URL(textoQr);
+    return url.searchParams.get("id") || textoQr;
+  } catch (_) {
+    return textoQr;
+  }
 }
 
 function descricaoDoStatus(status) {
@@ -172,6 +199,22 @@ function formatarObjeto(obj) {
     .filter(([, valor]) => valor !== null && valor !== undefined && valor !== "")
     .map(([chave, valor]) => `${chave}: ${valor}`)
     .join("\n");
+}
+
+function formatarVisibilidade(dadosLiberados) {
+  if (!dadosLiberados) return "Nenhum dado adicional liberado.";
+
+  const campos = dadosLiberados.camposPermitidos?.length
+    ? dadosLiberados.camposPermitidos.join(", ")
+    : "nenhum campo sensivel";
+  const dados = formatarObjeto(dadosLiberados.dados);
+
+  return (
+    `Nivel de visibilidade: ${dadosLiberados.nivel}\n` +
+    `Regra: ${dadosLiberados.descricao}\n` +
+    `Campos permitidos: ${campos}\n\n` +
+    `Dados liberados para este perfil:\n${dados || "Nenhum dado adicional liberado."}`
+  );
 }
 
 // Task 4.3: historico COMPLETO da cadeia de substituicoes, reconstruido pelo
@@ -267,6 +310,76 @@ document.getElementById("btnConsultarPublico").onclick = () => {
   consultarPublico(document.getElementById("inputId").value.trim());
 };
 
+async function pararScannerQr() {
+  scannerAtivo = false;
+  if (scannerStream) {
+    scannerStream.getTracks().forEach((track) => track.stop());
+    scannerStream = null;
+  }
+  document.getElementById("scannerQr").style.display = "none";
+}
+
+// Leitura de QR Code no navegador. Usa a camera via getUserMedia e a API
+// BarcodeDetector, quando disponivel. Funciona em localhost ou HTTPS; em origem
+// insegura o navegador bloqueia a camera por protecao do usuario.
+document.getElementById("btnLerQr").onclick = async () => {
+  const resultadoQr = document.getElementById("resultadoQr");
+
+  if (!navigator.mediaDevices?.getUserMedia) {
+    mostrar("resultadoQr", "Este navegador nao permite acesso a camera nesta pagina.");
+    document.getElementById("scannerQr").style.display = "block";
+    return;
+  }
+
+  if (!("BarcodeDetector" in window)) {
+    mostrar("resultadoQr", "Este navegador nao suporta leitura nativa de QR Code. Use Chrome/Edge atual ou cole o codigo manualmente.");
+    document.getElementById("scannerQr").style.display = "block";
+    return;
+  }
+
+  try {
+    await pararScannerQr();
+    document.getElementById("scannerQr").style.display = "block";
+    resultadoQr.style.display = "none";
+
+    const detector = new BarcodeDetector({ formats: ["qr_code"] });
+    const video = document.getElementById("videoQr");
+    scannerStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: "environment" } },
+      audio: false,
+    });
+    video.srcObject = scannerStream;
+    await video.play();
+
+    scannerAtivo = true;
+    const detectar = async () => {
+      if (!scannerAtivo) return;
+      try {
+        const codigos = await detector.detect(video);
+        if (codigos.length > 0) {
+          const valor = codigos[0].rawValue;
+          const id = extrairIdDoQr(valor);
+          document.getElementById("inputId").value = id;
+          mostrar("resultadoQr", `QR lido: ${valor}\nIdentificador usado: ${id}`);
+          await pararScannerQr();
+          await consultarPublico(id);
+          return;
+        }
+      } catch (err) {
+        mostrar("resultadoQr", "Nao foi possivel ler o QR: " + (err?.message || String(err)));
+      }
+      requestAnimationFrame(detectar);
+    };
+    requestAnimationFrame(detectar);
+  } catch (err) {
+    mostrar("resultadoQr", "Falha ao abrir a camera: " + (err?.message || String(err)));
+    await pararScannerQr();
+    document.getElementById("scannerQr").style.display = "block";
+  }
+};
+
+document.getElementById("btnPararQr").onclick = pararScannerQr;
+
 // Task 3.4: se o documento foi substituido, pula para o fim da cadeia de
 // substituicoes usando a rota publica do backend. A blockchain continua sendo a
 // fonte do status; o backend so evita expor RPC/contrato diretamente no QR.
@@ -339,7 +452,7 @@ document.getElementById("btnVerDetalhes").onclick = async () => {
 
     const r = dadosAcesso.registro;
     const v = dadosAcesso.verificador;
-    const dadosLiberados = formatarObjeto(dadosAcesso.dadosLiberados);
+    const visibilidade = formatarVisibilidade(dadosAcesso.dadosLiberados);
 
     mostrar(
       "resultadoDetalhado",
@@ -351,7 +464,7 @@ document.getElementById("btnVerDetalhes").onclick = async () => {
       `emitidoEm: ${new Date(r.emitidoEm * 1000).toLocaleString()}\n` +
       `expiraEm: ${r.expiraEm === 0 ? "sem expiracao" : new Date(r.expiraEm * 1000).toLocaleString()}\n` +
       `status: ${r.status}\n\n` +
-      `Dados liberados para este perfil:\n${dadosLiberados || "Nenhum dado adicional liberado."}`
+      visibilidade
     );
 
     mostrar(

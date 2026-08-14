@@ -7,3 +7,27 @@ function resolverIdentificadorDocumento(valor) {
   if (/^0x[0-9a-fA-F]{64}$/.test(v)) return v;
   return ethers.keccak256(ethers.toUtf8Bytes(v));
 }
+
+// Quando o front e servido pelo proprio backend, a API esta na mesma origem
+// (ex.: http://localhost:3001). Se alguem ainda abrir o front por um servidor
+// estatico separado, mantemos localhost:3001 como padrao de desenvolvimento.
+function obterBackendPadrao() {
+  const params = new URLSearchParams(window.location.search);
+  const backendParam = params.get("backend");
+  if (backendParam) return backendParam;
+
+  const hostLocal = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+  if (hostLocal && window.location.port && window.location.port !== "3001") {
+    return "http://localhost:3001";
+  }
+
+  return window.location.origin;
+}
+
+async function carregarConfigBackend() {
+  const backendUrl = obterBackendPadrao().replace(/\/$/, "");
+  const resp = await fetch(`${backendUrl}/api/config`);
+  const dados = await resp.json();
+  if (!resp.ok) throw new Error(dados.erro || "Nao foi possivel carregar configuracao do backend.");
+  return dados;
+}

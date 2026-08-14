@@ -93,19 +93,8 @@ try {
 <p class="subtitulo" id="boasVindas"></p>
 
 <section>
-  <h2>O que você quer fazer?</h2>
-  <div class="cards">
-    <div class="card">
-      <h3>Registrar documento</h3>
-      <p>Registrar ou revogar documentos na Vara, falando direto com o contrato pelo MetaMask.</p>
-      <a class="botao" href="registrar">Registrar documento</a>
-    </div>
-    <div class="card">
-      <h3>Encontrar documento</h3>
-      <p>Buscar documentos por identificador, por arquivo (hash) ou por status/data.</p>
-      <a class="botao" href="buscar">Encontrar documento</a>
-    </div>
-  </div>
+  <h2 id="tituloAcoes">O que você quer fazer?</h2>
+  <div class="cards" id="cardsAcoes"></div>
 </section>
 
 <section>
@@ -117,7 +106,56 @@ try {
 // Neste ponto SESSAO já foi validada pela guarda no <head> (senão a página
 // já teria redirecionado). Só preenche o nome/instituição na tela.
 document.getElementById("boasVindas").textContent =
-  `Bem-vindo, ${SESSAO.nome} — ${SESSAO.instituicao}`;
+  `Bem-vindo, ${SESSAO.nome} — ${SESSAO.instituicao}` +
+  (SESSAO.perfil ? ` | perfil: ${SESSAO.perfil}` : "");
+
+function card(titulo, texto, href, label) {
+  return `
+    <div class="card">
+      <h3>${titulo}</h3>
+      <p>${texto}</p>
+      <a class="botao" href="${href}">${label}</a>
+    </div>
+  `;
+}
+
+if (SESSAO.perfil === "vara") {
+  document.getElementById("tituloAcoes").textContent = "Painel administrativo da Vara";
+  document.getElementById("cardsAcoes").innerHTML =
+    card(
+      "Emitir documento",
+      "Registra hash e metadados de validade na blockchain e gera o QR Code dinamico.",
+      "registrar",
+      "Registrar documento"
+    ) +
+    card(
+      "Gerenciar documentos",
+      "Busca documentos para auditar, revogar ou substituir por uma nova versao.",
+      "buscar",
+      "Buscar e gerenciar"
+    ) +
+    card(
+      "Auditar validacoes",
+      "Consulta status, historico de acessos e cadeia de substituicoes.",
+      "buscar",
+      "Abrir auditoria"
+    );
+} else {
+  document.getElementById("tituloAcoes").textContent = "Validacao por perfil";
+  document.getElementById("cardsAcoes").innerHTML =
+    card(
+      "Validar por QR Code",
+      "Abre a camera, le o QR e mostra se o documento e valido. Apos assinatura, exibe somente os dados permitidos ao seu perfil.",
+      "verificar",
+      "Ler QR ou validar"
+    ) +
+    card(
+      "Validar por identificador",
+      "Cole o codigo/documentId do documento quando nao estiver com o QR disponivel.",
+      "verificar",
+      "Informar documento"
+    );
+}
 
 document.getElementById("btnSair").onclick = () => {
   sessionStorage.removeItem(CHAVE_SESSAO);

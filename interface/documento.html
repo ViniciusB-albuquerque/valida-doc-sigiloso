@@ -7,11 +7,16 @@
 <script src="util.js"></script>
 <script>
 const CHAVE_SESSAO = "verificajus_sessao";
+var SESSAO = null;
 try {
   const bruto = sessionStorage.getItem(CHAVE_SESSAO);
-  const sessao = bruto ? JSON.parse(bruto) : null;
-  if (!sessao || typeof sessao !== "object") {
+  SESSAO = bruto ? JSON.parse(bruto) : null;
+  if (!SESSAO || typeof SESSAO !== "object") {
     window.location.href = "login";
+  }
+  if (SESSAO.perfil !== "vara") {
+    const params = new URLSearchParams(window.location.search);
+    window.location.href = "verificar" + (params.get("id") ? `?id=${encodeURIComponent(params.get("id"))}` : "");
   }
 } catch (err) {
   window.location.href = "login";
@@ -100,8 +105,8 @@ try {
 <p class="subtitulo" id="idAtual"></p>
 
 <div class="aviso">
-  Ferramenta de <strong>desenvolvimento/teste</strong>. Detalhes completos e ações de gestão
-  (revogar, substituir) — só a Vara consegue agir; qualquer carteira conectada consegue ver os detalhes.
+  Ferramenta de <strong>desenvolvimento/teste</strong>. Esta tela e exclusiva da Vara:
+  permite auditar, revogar e substituir documentos. Demais perfis usam a validacao seletiva.
 </div>
 
 <section>
@@ -169,6 +174,12 @@ if (window.ethereum) {
 
 const params = new URLSearchParams(window.location.search);
 const idBruto = params.get("id") || "";
+
+carregarConfigBackend()
+  .then((config) => {
+    document.getElementById("inputEndereco").value = config.contratoEndereco;
+  })
+  .catch((err) => console.warn("Nao foi possivel carregar config do backend:", err));
 
 async function hashArquivo(file) {
   const buffer = await file.arrayBuffer();
