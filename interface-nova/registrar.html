@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<title>VerificaJus Sigilo — Registrar documento</title>
+<script src="https://unpkg.com/ethers@6/dist/ethers.umd.min.js" type="application/javascript"></script>
+<script src="util.js"></script>
+<script>
+const CHAVE_SESSAO = "verificajus_sessao";
+try {
+  const bruto = sessionStorage.getItem(CHAVE_SESSAO);
+  const sessao = bruto ? JSON.parse(bruto) : null;
+  if (!sessao || typeof sessao !== "object") {
+    window.location.href = "login";
+  }
+} catch (err) {
+  window.location.href = "login";
+}
+</script>
+<style>
+  :root { color-scheme: light; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    max-width: 780px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+    color: #1c1c1c;
+    background: #fafafa;
+  }
+  h1 { font-size: 1.3rem; margin-bottom: 0; }
+  p.subtitulo { color: #555; font-size: 0.9rem; margin-top: 0.3rem; }
+  .aviso {
+    background: #fff4e5;
+    border: 1px solid #f0c36d;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    margin: 1rem 0 1.5rem;
+  }
+  section {
+    background: white;
+    border: 1px solid #e2e2e2;
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+  section h2 { font-size: 1rem; margin-top: 0; }
+  label { display: block; font-size: 0.85rem; margin: 0.6rem 0 0.2rem; color: #444; }
+  input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 0.9rem;
+  }
+  button {
+    margin-top: 0.8rem;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    background: #1f2933;
+    color: white;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+  button:disabled { background: #b0b7bd; cursor: not-allowed; }
+  .resultado {
+    margin-top: 0.8rem;
+    padding: 0.7rem;
+    background: #f4f6f7;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  #contaAtual { font-size: 0.82rem; color: #444; }
+  #qrResultado { margin-top: 0.8rem; text-align: center; }
+  #qrResultado img { border: 1px solid #e2e2e2; border-radius: 8px; padding: 0.5rem; background: white; }
+  #qrLink { font-size: 0.75rem; word-break: break-all; margin-top: 0.5rem; color: #555; }
+  a.link-voltar { font-size: 0.85rem; color: #1f2933; }
+</style>
+</head>
+<body>
+
+<a class="link-voltar" href="painel">← Voltar ao painel</a>
+<h1>VerificaJus Sigilo — Registrar documento</h1>
+<p class="subtitulo">Só a Vara consegue registrar. Conecte a carteira autorizada para continuar.</p>
+
+<div class="aviso">
+  Ferramenta de <strong>desenvolvimento/teste</strong>. O hash do documento é calculado a partir
+  do conteúdo real do PDF, no seu navegador — o arquivo em si nunca é enviado a lugar nenhum.
+</div>
+
+<section>
+  <h2>1. Conexão</h2>
+  <button id="btnConectar">Conectar MetaMask</button>
+  <div id="contaAtual" class="resultado" style="display:none;"></div>
+
+  <label for="inputEndereco">Endereço do contrato (copiado do deploy)</label>
+  <input id="inputEndereco" placeholder="0x..." />
+  <button id="btnCarregar" class="secundario">Carregar contrato</button>
+  <div id="papelUsuario" class="resultado" style="display:none;"></div>
+</section>
+
+<section id="secRegistrar">
+  <h2>2. Registrar documento</h2>
+  <label for="regRotulo">Identificador interno do documento (ex.: alvara-viagem-0001)</label>
+  <input id="regRotulo" placeholder="alvara-viagem-0001" />
+  <label for="regArquivo">Documento (PDF)</label>
+  <input id="regArquivo" type="file" accept="application/pdf" />
+  <div id="regHashPreview" class="resultado" style="display:none;"></div>
+
+  <div id="avisoHashDuplicado" class="aviso" style="display:none;"></div>
+
+  <label for="regExpira">Expira em (opcional — deixe vazio para sem expiração)</label>
+  <input id="regExpira" type="datetime-local" />
+  <button id="btnRegistrar">Registrar</button>
+  <div id="resultadoRegistrar" class="resultado" style="display:none;"></div>
+
+  <div id="qrResultado" style="display:none;">
+    <img id="qrImagem" alt="QR Code de verificação" width="220" height="220" />
+    <div id="qrLink"></div>
+  </div>
+</section>
+
+<script>
+const ABI = [
+  "function vara() view returns (address)",
+  "function registrarDocumento(bytes32 documentId, bytes32 documentHash, uint64 expiraEm)",
+  "function consultarPorHash(bytes32 documentHash) view returns (bool existe, bytes32 documentId)",
+];
+
+let provider, signer, contrato;
+let isVara = false;
+
+if (window.ethereum) {
+  window.ethereum.on("accountsChanged", () => window.location.reload());
+  window.ethereum.on("chainChanged", () => window.location.reload());
+}
+
+const CHAIN_ID_ESPERADO = 1337n;
+
+async function hashArquivo(file) {
+  const buffer = await file.arrayBuffer();
+  return ethers.keccak256(new Uint8Array(buffer));
+}
+
+function atualizarPapelUsuario(enderecoConectado, enderecoVara) {
+  isVara = enderecoConectado.toLowerCase() === enderecoVara.toLowerCase();
+
+  const el = document.getElementById("papelUsuario");
+  el.style.display = "block";
+  el.textContent = isVara
+    ? `Você é a Vara (${enderecoConectado}) — pode registrar.`
+    : `Você está conectado como verificador (${enderecoConectado}) — não pode registrar. ` +
+      `A Vara deste contrato é ${enderecoVara}.`;
+
+  document.getElementById("secRegistrar").querySelectorAll("input, button").forEach((el) => {
+    el.disabled = !isVara;
+  });
+}
+
+function mostrar(id, texto) {
+  const el = document.getElementById(id);
+  el.style.display = "block";
+  el.textContent = texto;
+}
+
+function decodificarErro(err, contratoRef) {
+  const data = err?.data ?? err?.info?.error?.data;
+  if (data && contratoRef) {
+    try {
+      const decoded = contratoRef.interface.parseError(data);
+      return `${decoded.name}(${decoded.args.map(String).join(", ")})`;
+    } catch (_) {}
+  }
+  return err?.reason || err?.shortMessage || err?.message || String(err);
+}
+
+async function trocarParaRedeLocal() {
+  const CHAIN_ID_HEX = "0x539";
+  try {
+    await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: CHAIN_ID_HEX }] });
+  } catch (switchError) {
+    if (switchError.code === 4902) {
+      await window.ethereum.request({
+        method: "wallet_addEthereumChain",
+        params: [{
+          chainId: CHAIN_ID_HEX,
+          chainName: "Hardhat Local",
+          rpcUrls: ["http://127.0.0.1:8545"],
+          nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+        }],
+      });
+    } else {
+      throw switchError;
+    }
+  }
+}
+
+document.getElementById("btnConectar").onclick = async () => {
+  if (!window.ethereum) {
+    alert("MetaMask não encontrado. Instale a extensão para continuar.");
+    return;
+  }
+  provider = new ethers.BrowserProvider(window.ethereum);
+  await provider.send("eth_requestAccounts", []);
+
+  const rede = await provider.getNetwork();
+  const el = document.getElementById("contaAtual");
+
+  if (rede.chainId !== CHAIN_ID_ESPERADO) {
+    el.style.display = "block";
+    el.style.background = "#fff4e5";
+    el.textContent = `Rede atual (chainId ${rede.chainId}) é diferente da esperada (${CHAIN_ID_ESPERADO}).\nPedindo ao MetaMask para trocar — aprove o popup...`;
+    try {
+      await trocarParaRedeLocal();
+      return;
+    } catch (err) {
+      el.style.background = "#f7d9d9";
+      el.textContent = `Não foi possível trocar automaticamente de rede: ${err?.message || err}\n\nAbra o MetaMask manualmente e selecione a rede com chainId 1337.`;
+      return;
+    }
+  }
+
+  signer = await provider.getSigner();
+  el.style.display = "block";
+  el.style.background = "";
+  el.textContent = `Conectado: ${await signer.getAddress()}\nRede: chainId ${rede.chainId}`;
+};
+
+document.getElementById("btnCarregar").onclick = async () => {
+  const endereco = document.getElementById("inputEndereco").value.trim();
+  if (!ethers.isAddress(endereco)) return alert("Endereço de contrato inválido.");
+  if (!signer) return alert("Conecte o MetaMask primeiro.");
+
+  contrato = new ethers.Contract(endereco, ABI, signer);
+
+  const enderecoVara = await contrato.vara();
+  const enderecoConectado = await signer.getAddress();
+  atualizarPapelUsuario(enderecoConectado, enderecoVara);
+
+  alert("Contrato carregado. Já pode registrar.");
+};
+
+document.getElementById("regArquivo").addEventListener("change", async (ev) => {
+  const file = ev.target.files[0];
+  const el = document.getElementById("regHashPreview");
+  const avisoEl = document.getElementById("avisoHashDuplicado");
+  const btnRegistrar = document.getElementById("btnRegistrar");
+
+  avisoEl.style.display = "none";
+  btnRegistrar.disabled = !isVara;
+
+  if (!file) { el.style.display = "none"; return; }
+
+  const hash = await hashArquivo(file);
+  el.style.display = "block";
+  el.textContent = `Arquivo: ${file.name} (${file.size} bytes)\ndocumentHash calculado: ${hash}`;
+
+  if (!contrato) return;
+
+  try {
+    const [existe, documentIdExistente] = await contrato.consultarPorHash(hash);
+    if (existe) {
+      const linkVerificar = new URL("verificar", window.location.href);
+      linkVerificar.searchParams.set("id", documentIdExistente);
+
+      avisoEl.style.display = "block";
+      avisoEl.innerHTML =
+        `Este documento (mesmo conteúdo de arquivo) já foi registrado, sob outro identificador.<br/>` +
+        `<a href="${linkVerificar.toString()}" target="_blank">Ver documento existente</a>`;
+
+      btnRegistrar.disabled = true;
+    }
+  } catch (err) {
+    console.warn("Não foi possível checar duplicata por hash:", err);
+  }
+});
+
+function gerarQrParaDocumento(documentId) {
+  const url = new URL("verificar", window.location.href);
+  url.searchParams.set("id", documentId);
+
+  const tamanho = "220x220";
+  const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${tamanho}&data=${encodeURIComponent(url.toString())}`;
+
+  document.getElementById("qrImagem").src = qrApiUrl;
+  document.getElementById("qrLink").textContent = url.toString();
+  document.getElementById("qrResultado").style.display = "block";
+}
+
+document.getElementById("btnRegistrar").onclick = async () => {
+  if (!contrato) return alert("Carregue o contrato primeiro.");
+  const rotulo = document.getElementById("regRotulo").value;
+  const arquivo = document.getElementById("regArquivo").files[0];
+  const expiraStr = document.getElementById("regExpira").value;
+  if (!rotulo || !arquivo) return alert("Preencha o identificador e escolha o arquivo do documento.");
+
+  const documentId = resolverIdentificadorDocumento(rotulo);
+  const documentHash = await hashArquivo(arquivo);
+  const expiraEm = expiraStr ? Math.floor(new Date(expiraStr).getTime() / 1000) : 0;
+
+  document.getElementById("qrResultado").style.display = "none";
+
+  try {
+    const tx = await contrato.registrarDocumento(documentId, documentHash, expiraEm);
+    mostrar("resultadoRegistrar", `Transação enviada: ${tx.hash}\nAguardando confirmação...`);
+    const receipt = await tx.wait();
+    mostrar(
+      "resultadoRegistrar",
+      `Confirmado no bloco ${receipt.blockNumber}\ntx: ${receipt.hash}\ndocumentId: ${documentId}`
+    );
+
+    gerarQrParaDocumento(documentId);
+  } catch (err) {
+    mostrar("resultadoRegistrar", "Erro: " + decodificarErro(err, contrato));
+  }
+};
+</script>
+</body>
+</html>
