@@ -1,297 +1,502 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8" />
-<title>VerificaJus Sigilo — Verificação pública</title>
-<script src="https://unpkg.com/ethers@6/dist/ethers.umd.min.js" type="application/javascript"></script>
-<style>
-  :root { color-scheme: light; }
-  body {
-    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-    max-width: 720px;
-    margin: 2rem auto;
-    padding: 0 1rem;
-    color: #1c1c1c;
-    background: #fafafa;
-  }
-  h1 { font-size: 1.3rem; margin-bottom: 0; }
-  p.subtitulo { color: #555; font-size: 0.9rem; margin-top: 0.3rem; }
-  section {
-    background: white;
-    border: 1px solid #e2e2e2;
-    border-radius: 10px;
-    padding: 1rem 1.25rem;
-    margin-bottom: 1.25rem;
-  }
-  section h2 { font-size: 1rem; margin-top: 0; }
-  section.nivel2 { background: #fafcff; }
-  label { display: block; font-size: 0.85rem; margin: 0.6rem 0 0.2rem; color: #444; }
-  input {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 0.45rem 0.6rem;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    font-size: 0.9rem;
-  }
-  button {
-    margin-top: 0.8rem;
-    padding: 0.55rem 1.1rem;
-    border: none;
-    border-radius: 6px;
-    background: #1f2933;
-    color: white;
-    font-size: 0.85rem;
-    cursor: pointer;
-  }
-  button.secundario { background: #52606d; }
-  button:disabled { background: #b0b7bd; cursor: not-allowed; }
-  .resultado {
-    margin-top: 0.8rem;
-    padding: 0.7rem;
-    background: #f4f6f7;
-    border-radius: 6px;
-    font-size: 0.82rem;
-    white-space: pre-wrap;
-    word-break: break-all;
-  }
-  .status-grande {
-    font-size: 1.4rem;
-    font-weight: 700;
-    padding: 0.9rem;
-    border-radius: 8px;
-    text-align: center;
-    margin-top: 0.8rem;
-  }
-  .status-Valido { background: #d7f5df; color: #1a7a3d; }
-  .status-Expirado { background: #f5e9d7; color: #8a5b1a; }
-  .status-Revogado { background: #f7d9d9; color: #a12b2b; }
-  .status-Substituido { background: #dde3f7; color: #2b3ea1; }
-  .status-desconhecido { background: #eee; color: #555; }
-  #historico { max-height: 200px; overflow-y: auto; font-size: 0.8rem; }
-  .aviso {
-    background: #fff4e5;
-    border: 1px solid #f0c36d;
-    padding: 0.7rem 1rem;
-    border-radius: 8px;
-    font-size: 0.82rem;
-    margin: 1rem 0 1.5rem;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VerificaJus Sigilo — Portal de Validação Pública (gluestack-ui)</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Ethers.js v6 -->
+  <script src="https://unpkg.com/ethers@6/dist/ethers.umd.min.js" type="application/javascript"></script>
 </head>
 <body>
+  <!-- Faixa Institucional Federal -->
+  <div class="gs-federal-stripe"></div>
 
-<h1>VerificaJus Sigilo — Verificação pública</h1>
-<p class="subtitulo">Nível 1 é aberto a qualquer pessoa, sem carteira. Nível 2 exige conectar
-uma carteira e deixa um registro público de quem confirmou a verificação.</p>
+  <!-- Barra Superior gluestack-ui -->
+  <header class="gs-navbar">
+    <div class="gs-navbar-container">
+      <a href="index.html" class="gs-brand">
+        <div class="gs-brand-icon" title="Poder Judiciário — República Federativa do Brasil">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+            <path d="M2 17l10 5 10-5"></path>
+            <path d="M2 12l10 5 10-5"></path>
+          </svg>
+        </div>
+        <div class="gs-brand-info">
+          <h1>
+            VerificaJus
+            <span class="gs-tag-pill">Portal Público</span>
+          </h1>
+          <p>Validação On-Chain &bull; Polícia Federal &bull; Companhias Aéreas &bull; Cidadãos</p>
+        </div>
+      </a>
 
-<div class="aviso">
-  Ferramenta de <strong>desenvolvimento/teste</strong>. Numa versão final, o link/QR já
-  viria com endereço do contrato e identificador preenchidos — aqui você configura à mão.
-</div>
+      <div class="gs-navbar-actions">
+        <!-- Navegação de Telas -->
+        <nav class="gs-nav-tabs">
+          <a href="index.html" class="gs-nav-tab-item">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+            Painel da Vara
+          </a>
+          <a href="verificar.html" class="gs-nav-tab-item active">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            Validação Pública
+          </a>
+        </nav>
+      </div>
+    </div>
+  </header>
 
-<section>
-  <h2>Configuração</h2>
-  <label for="inputRpc">RPC da rede</label>
-  <input id="inputRpc" placeholder="http://127.0.0.1:8545" />
-  <label for="inputEndereco">Endereço do contrato</label>
-  <input id="inputEndereco" placeholder="0x..." />
-</section>
+  <!-- Container Principal -->
+  <main class="gs-main-container">
 
-<section>
-  <h2>Nível 1 — Consulta pública (sem carteira)</h2>
-  <label for="inputId">Identificador do documento (cole o hash, ou digite o rótulo interno usado no registro)</label>
-  <input id="inputId" placeholder="0x... ou alvara-viagem-0001" />
-  <button id="btnConsultarPublico">Consultar</button>
-  <div id="statusGrande" class="status-grande" style="display:none;"></div>
-  <div id="resultadoPublico" class="resultado" style="display:none;"></div>
+    <!-- Hero gluestack-ui -->
+    <section class="gs-hero">
+      <h2 class="gs-hero-title">Portal de Validação Pública & Auditoria de Alvarás</h2>
+      <p class="gs-hero-desc">
+        Consulta pública e não-repúdio de fiscalização. <strong>Nível 1 (Público)</strong> é aberto a qualquer cidadão ou totem sem necessidade de carteira instalada. <strong>Nível 2 (Fiscalização)</strong> permite aos agentes da Polícia Federal e fiscais emitir um carimbo digital de não-repúdio de verificação.
+      </p>
+      <div class="gs-hero-badges">
+        <span class="gs-badge gs-badge-green"><span class="gs-badge-dot"></span> Consulta Aberta Via RPC</span>
+        <span class="gs-badge gs-badge-gold">Carimbo de Não-Repúdio On-Chain</span>
+        <span class="gs-badge gs-badge-blue">Compatível com QR Code</span>
+      </div>
+    </section>
 
-  <label style="margin-top:1rem;">Histórico de verificações (quem já confirmou ter visto os detalhes)</label>
-  <div id="historico" class="resultado">Consulte um documento acima para ver o histórico.</div>
-</section>
+    <!-- Parâmetros da Conexão -->
+    <div class="gs-card" style="margin-bottom: 2rem;">
+      <div class="gs-card-header">
+        <div class="gs-card-header-main">
+          <div class="gs-card-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
+          </div>
+          <div class="gs-card-title">
+            <h3>Parâmetros da Conexão Blockchain</h3>
+            <p>Endereço e RPC do contrato</p>
+          </div>
+        </div>
+        <span class="gs-badge gs-badge-blue">Auto-sincronizado</span>
+      </div>
 
-<section class="nivel2">
-  <h2>Nível 2 — Mais detalhes (com carteira)</h2>
-  <button id="btnConectar">Conectar carteira</button>
-  <div id="contaAtual" class="resultado" style="display:none;"></div>
-  <div id="resultadoDetalhado" class="resultado" style="display:none;"></div>
-  <button id="btnCarimbar" class="secundario" style="display:none;">Marcar como verificado por mim</button>
-  <div id="resultadoCarimbar" class="resultado" style="display:none;"></div>
-</section>
+      <div class="gs-card-body">
+        <div class="gs-grid-2col">
+          <div class="gs-form-control">
+            <label class="gs-form-label" for="inputRpc">
+              <span>Endpoint RPC (Nó Blockchain)</span>
+              <span class="gs-form-hint">JSON-RPC</span>
+            </label>
+            <input type="text" id="inputRpc" class="gs-input gs-mono" placeholder="http://127.0.0.1:8545" />
+          </div>
 
-<script>
-const ABI = [
-  "function vara() view returns (address)",
-  "function consultarStatus(bytes32 documentId) view returns (uint8)",
-  "function obterRegistro(bytes32 documentId) view returns (bytes32 documentHash, address emissor, uint64 emitidoEm, uint64 expiraEm, uint8 status, bytes32 substituidoPor)",
-  "function confirmarVerificacao(bytes32 documentId)",
-  "event DocumentoVerificadoPor(bytes32 indexed documentId, address indexed verificador, uint64 verificadoEm)",
-  "error DocumentIdInvalido()",
-  "error DocumentHashInvalido()",
-  "error EnderecoInvalido()",
-  "error DocumentoJaRegistrado(bytes32 documentId)",
-  "error DocumentoInexistente(bytes32 documentId)",
-  "error DocumentoNaoValido(bytes32 documentId, uint8 statusAtual)"
-];
+          <div class="gs-form-control">
+            <label class="gs-form-label" for="inputEndereco">
+              <span>Endereço do Contrato Registry</span>
+              <span class="gs-form-hint">0x...</span>
+            </label>
+            <input type="text" id="inputEndereco" class="gs-input gs-mono" placeholder="0x5FbDB2315678afecb367f032d93F642f64180aa3" />
+          </div>
+        </div>
+      </div>
+    </div>
 
-const STATUS_NOMES = ["Valido", "Expirado", "Revogado", "Substituido"];
-const CHAIN_ID_ESPERADO = 1337n;
+    <!-- =========================================================================
+         NÍVEL 1: CONSULTA PÚBLICA (SEM CARTEIRA)
+         ========================================================================= -->
+    <div class="gs-card" style="margin-bottom: 2rem;">
+      <div class="gs-card-header">
+        <div class="gs-card-header-main">
+          <div class="gs-card-icon icon-green">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          </div>
+          <div class="gs-card-title">
+            <h3>Nível 1 — Consulta Aberta de Autenticidade</h3>
+            <p>Não requer carteira MetaMask. Adequado para totens e balcões de aeroporto.</p>
+          </div>
+        </div>
+        <span class="gs-badge gs-badge-green">Sem Carteira</span>
+      </div>
 
-let providerLeitura, providerCarteira, signer, contratoLeitura, contratoCarteira;
-let documentIdAtual = null;
+      <div class="gs-card-body">
+        <div class="gs-grid-2col">
+          <div class="gs-form-control">
+            <label class="gs-form-label" for="inputId">
+              <span>Identificador do Documento</span>
+              <span class="gs-form-hint">Rótulo interno ou Hash Bytes32</span>
+            </label>
+            <input type="text" id="inputId" class="gs-input gs-mono" placeholder="ex: alvara-viagem-2026-001 ou 0x..." />
+            <button id="btnConsultarPublico" class="gs-btn gs-btn-primary" style="margin-top: 0.75rem;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              Consultar Vigência em Blockchain
+            </button>
+          </div>
 
-// Preenche os campos a partir da URL, ex.:
-// verificar.html?rpc=http://127.0.0.1:8545&address=0x...&id=0x...
-// É exatamente esse padrão de URL que um QR Code real apontaria.
-const params = new URLSearchParams(window.location.search);
-document.getElementById("inputRpc").value = params.get("rpc") || "http://127.0.0.1:8545";
-document.getElementById("inputEndereco").value = params.get("address") || "";
-document.getElementById("inputId").value = params.get("id") || "";
+          <div class="gs-form-control">
+            <label class="gs-form-label">
+              <span>(Opcional) Prova de Integridade do Arquivo PDF</span>
+              <span class="gs-form-hint">Calcula hash no navegador</span>
+            </label>
+            <div class="gs-dropzone" id="publicDropzone" style="padding: 1.25rem;">
+              <input type="file" id="publicArquivo" accept="application/pdf" />
+              <div class="gs-dropzone-title" id="publicDropzoneText" style="font-size:0.9rem;">Clique ou arraste o PDF para conferência</div>
+            </div>
+          </div>
+        </div>
 
-if (window.ethereum) {
-  window.ethereum.on("accountsChanged", () => window.location.reload());
-  window.ethereum.on("chainChanged", () => window.location.reload());
-}
+        <!-- Carimbo de Status Nível 1 -->
+        <div id="statusGrande" class="gs-inspection-stamp" style="display:none;"></div>
 
-function resolverDocumentId(valor) {
-  const v = valor.trim();
-  if (/^0x[0-9a-fA-F]{64}$/.test(v)) return v; // já é um documentId em bytes32
-  return ethers.keccak256(ethers.toUtf8Bytes(v)); // trata como rótulo interno
-}
+        <!-- Banner de Integridade -->
+        <div id="publicBannerIntegridade" class="gs-alert-banner" style="display:none;"></div>
 
-function mostrar(id, texto) {
-  const el = document.getElementById(id);
-  el.style.display = "block";
-  el.textContent = texto;
-}
+        <!-- Metadados da Consulta Pública -->
+        <div id="detalhesPublicos" style="background: var(--gs-bg-subtle); border: 1px solid var(--gs-border); border-radius: var(--gs-radius-lg); padding: 1.5rem; display:none; margin-top: 1.5rem;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.75rem; padding-bottom:0.75rem; border-bottom:1px solid var(--gs-border-subtle);">
+            <strong class="gs-heading" style="font-size:1.05rem;">Identificação do Registro On-Chain</strong>
+            <span id="badgePublicoMini" class="gs-badge">-</span>
+          </div>
+          <div class="gs-meta-table">
+            <div class="gs-meta-label">documentId:</div>
+            <div class="gs-meta-value gs-mono" id="pubDocId">-</div>
 
-function decodificarErro(err, contratoRef) {
-  const data = err?.data ?? err?.info?.error?.data;
-  if (data && contratoRef) {
-    try {
-      const decoded = contratoRef.interface.parseError(data);
-      return `${decoded.name}(${decoded.args.map(String).join(", ")})`;
-    } catch (_) {}
-  }
-  return err?.reason || err?.shortMessage || err?.message || String(err);
-}
+            <div class="gs-meta-label">Status Vigente:</div>
+            <div class="gs-meta-value" id="pubStatusTexto" style="font-weight:600;">-</div>
+          </div>
+        </div>
 
-async function carregarHistorico(contratoRef, providerRef, documentId) {
-  const el = document.getElementById("historico");
-  try {
-    // Nota técnica: contrato.queryFilter() e provider.getLogs() do ethers v6 se
-    // mostraram não confiáveis aqui quando o provider é um JsonRpcProvider puro
-    // (sem passar por um Signer) — retornavam 0 resultados mesmo com eventos
-    // existentes e o filtro (topics) correto. Confirmado isolando a causa: uma
-    // chamada eth_getLogs crua, com os MESMOS topics, funciona perfeitamente.
-    // Por isso usamos provider.send("eth_getLogs", ...) direto + parseLog manual,
-    // em vez do atalho de mais alto nível.
-    const filtro = contratoRef.filters.DocumentoVerificadoPor(documentId);
-    const topics = await filtro.getTopicFilter();
-    const enderecoContrato = await contratoRef.getAddress();
+        <!-- Histórico de Fiscalização / Não-Repúdio -->
+        <div style="margin-top: 1.5rem;">
+          <div class="gs-form-label" style="margin-bottom: 0.75rem;">
+            <span>Histórico de Fiscalizações Anteriores (Não-Repúdio On-Chain)</span>
+            <span class="gs-form-hint">Agentes que registraram conferência</span>
+          </div>
+          <div id="historicoContainer" class="gs-log-container">
+            <div style="color: var(--gs-text-muted); font-size: 0.85rem; padding: 1.5rem; text-align: center;">
+              Consulte um documento acima para carregar as fiscalizações registradas.
+            </div>
+          </div>
+        </div>
 
-    const logsCrus = await providerRef.send("eth_getLogs", [
-      { address: enderecoContrato, fromBlock: "0x0", toBlock: "latest", topics },
-    ]);
-    const eventos = logsCrus.map((log) => contratoRef.interface.parseLog(log));
+      </div>
+    </div>
 
-    if (eventos.length === 0) {
-      el.textContent = "Nenhuma verificação confirmada ainda para este documento.";
-      return;
+    <!-- =========================================================================
+         NÍVEL 2: FISCALIZAÇÃO QUALIFICADA (COM CARTEIRA)
+         ========================================================================= -->
+    <div class="gs-card">
+      <div class="gs-card-header">
+        <div class="gs-card-header-main">
+          <div class="gs-card-icon icon-gold">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+          </div>
+          <div class="gs-card-title">
+            <h3>Nível 2 — Fiscalização Qualificada & Carimbo de Não-Repúdio</h3>
+            <p>Para agentes da Polícia Federal, fiscais de aeroporto e conselheiros tutelares</p>
+          </div>
+        </div>
+        <span class="gs-badge gs-badge-gold">Auditoria Oficial</span>
+      </div>
+
+      <div class="gs-card-body">
+        <p style="font-size: 0.92rem; color: var(--gs-text-muted); line-height: 1.7;">
+          Ao fiscalizar um passageiro ou documento sigiloso, o agente autenticado pode emitir uma transação on-chain que comprova que realizou a fiscalização, sem revelar o teor sigiloso da decisão judicial.
+        </p>
+
+        <div style="display:flex; gap:1rem; align-items:center; flex-wrap:wrap; margin-top:0.5rem;">
+          <button id="btnConectarNivel2" class="gs-btn gs-btn-secondary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            <span id="labelConexaoNivel2">Conectar Carteira do Fiscal</span>
+          </button>
+
+          <button id="btnCarimbar" class="gs-btn gs-btn-green" style="display:none;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            Registrar Fiscalização / Carimbar Não-Repúdio
+          </button>
+        </div>
+
+        <div id="contaFiscalAtual" class="gs-mono" style="display:none; font-size:0.82rem; color:var(--gs-text-muted); margin-top:0.5rem;"></div>
+
+        <!-- Metadados Nível 2 -->
+        <div id="detalhesNivel2" style="background: var(--gs-bg-subtle); border: 1px solid var(--gs-border); border-radius: var(--gs-radius-lg); padding: 1.5rem; display:none; margin-top: 1.5rem;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.75rem; padding-bottom:0.75rem; border-bottom:1px solid var(--gs-border-subtle);">
+            <strong class="gs-heading" style="font-size:1.05rem;">Registro Completo do Alvará</strong>
+            <span class="gs-badge gs-badge-gold">Atestado pela Vara</span>
+          </div>
+
+          <div class="gs-meta-table">
+            <div class="gs-meta-label">documentHash:</div>
+            <div class="gs-meta-value gs-mono" id="n2DocHash">-</div>
+
+            <div class="gs-meta-label">Emissor Oficial:</div>
+            <div class="gs-meta-value gs-mono" id="n2Emissor">-</div>
+
+            <div class="gs-meta-label">Data de Emissão:</div>
+            <div class="gs-meta-value" id="n2EmitidoEm">-</div>
+
+            <div class="gs-meta-label">Prazo de Expiração:</div>
+            <div class="gs-meta-value" id="n2ExpiraEm">-</div>
+
+            <div class="gs-meta-label">Documento Sucessor:</div>
+            <div class="gs-meta-value gs-mono" id="n2SubstituidoPor">-</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Container de Toasts -->
+  <div id="toastContainer" class="gs-toast-wrapper"></div>
+
+  <!-- Rodapé -->
+  <footer class="gs-footer">
+    <div class="gs-footer-container">
+      <div>
+        <strong>VerificaJus Sigilo</strong> &bull; Portal de Verificação Pública e Fiscalização
+      </div>
+      <div>
+        Poder Judiciário &bull; República Federativa do Brasil
+      </div>
+    </div>
+  </footer>
+
+  <!-- Script do Portal -->
+  <script>
+    const ABI = [
+      "function vara() view returns (address)",
+      "function consultarStatus(bytes32 documentId) view returns (uint8)",
+      "function obterRegistro(bytes32 documentId) view returns (bytes32 documentHash, address emissor, uint64 emitidoEm, uint64 expiraEm, uint8 status, bytes32 substituidoPor)",
+      "function confirmarVerificacao(bytes32 documentId)",
+      "event DocumentoVerificadoPor(bytes32 indexed documentId, address indexed verificador, uint64 verificadoEm)",
+      "error DocumentIdInvalido()",
+      "error DocumentHashInvalido()",
+      "error EnderecoInvalido()",
+      "error DocumentoJaRegistrado(bytes32 documentId)",
+      "error DocumentoInexistente(bytes32 documentId)",
+      "error DocumentoNaoValido(bytes32 documentId, uint8 statusAtual)"
+    ];
+
+    const STATUS_NOMES = ["Valido", "Expirado", "Revogado", "Substituido"];
+    const CHAIN_ID_ESPERADO = 1337n;
+    const ENDERECO_PADRAO = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+
+    let providerLeitura, providerCarteira, signer, contratoLeitura, contratoCarteira;
+    let documentIdAtual = null;
+
+    // --- Toasts ---
+    function showToast(titulo, mensagem, tipo = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `gs-toast-box toast-${tipo}`;
+      toast.innerHTML = `
+        <div>
+          <h4 style="font-size:0.92rem; font-weight:600; margin-bottom:0.2rem; color:var(--gs-text-title);">${titulo}</h4>
+          <p style="font-size:0.84rem; color:var(--gs-text-muted);">${mensagem}</p>
+        </div>
+      `;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(12px)';
+        setTimeout(() => toast.remove(), 250);
+      }, 4500);
     }
-    el.textContent = eventos
-      .map((ev) => {
-        const quando = new Date(Number(ev.args.verificadoEm) * 1000).toLocaleString();
-        return `${quando} — verificado por ${ev.args.verificador}`;
-      })
-      .join("\n");
-  } catch (err) {
-    el.textContent = "Não foi possível carregar o histórico: " + decodificarErro(err, contratoRef);
-  }
-}
 
-document.getElementById("btnConsultarPublico").onclick = async () => {
-  const rpc = document.getElementById("inputRpc").value.trim();
-  const endereco = document.getElementById("inputEndereco").value.trim();
-  const idBruto = document.getElementById("inputId").value.trim();
+    // --- Preenchimento Automático via URL / LocalStorage ---
+    const params = new URLSearchParams(window.location.search);
+    document.getElementById("inputRpc").value = params.get("rpc") || "http://127.0.0.1:8545";
+    document.getElementById("inputEndereco").value = params.get("address") || localStorage.getItem('verificajus_contract_addr') || ENDERECO_PADRAO;
+    document.getElementById("inputId").value = params.get("id") || "";
 
-  if (!ethers.isAddress(endereco)) return alert("Endereço de contrato inválido.");
-  if (!idBruto) return alert("Preencha o identificador do documento.");
+    function resolverDocumentId(valor) {
+      const v = valor.trim();
+      if (/^0x[0-9a-fA-F]{64}$/.test(v)) return v;
+      return ethers.keccak256(ethers.toUtf8Bytes(v));
+    }
 
-  documentIdAtual = resolverDocumentId(idBruto);
+    async function hashArquivo(file) {
+      const buffer = await file.arrayBuffer();
+      return ethers.keccak256(new Uint8Array(buffer));
+    }
 
-  try {
-    providerLeitura = new ethers.JsonRpcProvider(rpc);
-    contratoLeitura = new ethers.Contract(endereco, ABI, providerLeitura);
+    function decodificarErro(err, contratoRef) {
+      const data = err?.data ?? err?.info?.error?.data;
+      if (data && contratoRef) {
+        try {
+          const decoded = contratoRef.interface.parseError(data);
+          return `${decoded.name}(${decoded.args.map(String).join(", ")})`;
+        } catch (_) {}
+      }
+      return err?.reason || err?.shortMessage || err?.message || String(err);
+    }
 
-    const status = await contratoLeitura.consultarStatus(documentIdAtual);
-    const nome = STATUS_NOMES[Number(status)] || "desconhecido";
+    // --- Carregar Histórico de Fiscalizações ---
+    async function carregarHistorico(contratoRef, providerRef, documentId) {
+      const container = document.getElementById("historicoContainer");
+      try {
+        const filtro = contratoRef.filters.DocumentoVerificadoPor(documentId);
+        const topics = await filtro.getTopicFilter();
+        const enderecoContrato = await contratoRef.getAddress();
 
-    const badge = document.getElementById("statusGrande");
-    badge.style.display = "block";
-    badge.className = "status-grande status-" + nome;
-    badge.textContent = nome === "Valido" ? "✓ VÁLIDO" : nome.toUpperCase();
+        const logsCrus = await providerRef.send("eth_getLogs", [
+          { address: enderecoContrato, fromBlock: "0x0", toBlock: "latest", topics },
+        ]);
+        const eventos = logsCrus.map((log) => contratoRef.interface.parseLog(log));
 
-    mostrar("resultadoPublico", `documentId: ${documentIdAtual}\nstatus: ${nome}`);
+        if (eventos.length === 0) {
+          container.innerHTML = '<div style="color: var(--gs-text-muted); font-size: 0.85rem; padding: 1.5rem; text-align: center;">Nenhuma fiscalização registrada para este alvará até o momento.</div>';
+          return;
+        }
 
-    await carregarHistorico(contratoLeitura, providerLeitura, documentIdAtual);
-  } catch (err) {
-    document.getElementById("statusGrande").style.display = "none";
-    mostrar("resultadoPublico", "Erro: " + decodificarErro(err, contratoLeitura));
-  }
-};
+        container.innerHTML = '';
+        eventos.reverse().forEach(ev => {
+          const quando = new Date(Number(ev.args.verificadoEm) * 1000).toLocaleString();
+          const item = document.createElement('div');
+          item.className = 'gs-log-item';
+          item.innerHTML = `
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <span class="gs-badge gs-badge-green"><span class="gs-badge-dot"></span> Fiscalização Registrada</span>
+              <span class="gs-mono" style="color:var(--gs-text-muted); font-size:0.75rem;">${quando}</span>
+            </div>
+            <div class="gs-mono" style="color:var(--gs-text-body); margin-top:0.35rem;">
+              Agente Fiscal: <strong>${ev.args.verificador}</strong>
+            </div>
+          `;
+          container.appendChild(item);
+        });
 
-document.getElementById("btnConectar").onclick = async () => {
-  if (!window.ethereum) return alert("MetaMask não encontrado.");
-  if (!documentIdAtual) return alert("Consulte um documento no Nível 1 primeiro.");
+      } catch (err) {
+        container.innerHTML = `<div style="color: var(--gs-danger); font-size: 0.85rem; padding: 1rem;">Falha ao carregar histórico: ${decodificarErro(err, contratoRef)}</div>`;
+      }
+    }
 
-  providerCarteira = new ethers.BrowserProvider(window.ethereum);
-  await providerCarteira.send("eth_requestAccounts", []);
+    // --- Consulta Nível 1 ---
+    document.getElementById("btnConsultarPublico").onclick = async () => {
+      const rpc = document.getElementById("inputRpc").value.trim();
+      const endereco = document.getElementById("inputEndereco").value.trim();
+      const idBruto = document.getElementById("inputId").value.trim();
 
-  const rede = await providerCarteira.getNetwork();
-  if (rede.chainId !== CHAIN_ID_ESPERADO) {
-    alert(`Rede incorreta (chainId ${rede.chainId}). Troque para a rede com chainId 1337 no MetaMask.`);
-    return;
-  }
+      if (!ethers.isAddress(endereco)) return showToast('Endereço Inválido', 'Informe um endereço válido do contrato.', 'error');
+      if (!idBruto) return showToast('Campo Vazio', 'Informe o identificador ou hash do documento.', 'error');
 
-  signer = await providerCarteira.getSigner();
-  const endereco = document.getElementById("inputEndereco").value.trim();
-  contratoCarteira = new ethers.Contract(endereco, ABI, signer);
+      localStorage.setItem('verificajus_contract_addr', endereco);
+      documentIdAtual = resolverDocumentId(idBruto);
 
-  const contaConectada = await signer.getAddress();
-  mostrar("contaAtual", `Conectado: ${contaConectada}`);
+      try {
+        providerLeitura = new ethers.JsonRpcProvider(rpc);
+        contratoLeitura = new ethers.Contract(endereco, ABI, providerLeitura);
 
-  try {
-    const r = await contratoCarteira.obterRegistro(documentIdAtual);
-    mostrar(
-      "resultadoDetalhado",
-      `documentHash: ${r.documentHash}\n` +
-      `emissor: ${r.emissor}\n` +
-      `emitidoEm: ${new Date(Number(r.emitidoEm) * 1000).toLocaleString()}\n` +
-      `expiraEm: ${r.expiraEm == 0n ? "sem expiração" : new Date(Number(r.expiraEm) * 1000).toLocaleString()}\n` +
-      `substituidoPor: ${r.substituidoPor === ethers.ZeroHash ? "-" : r.substituidoPor}`
-    );
-    document.getElementById("btnCarimbar").style.display = "inline-block";
-  } catch (err) {
-    mostrar("resultadoDetalhado", "Erro ao buscar detalhes: " + decodificarErro(err, contratoCarteira));
-  }
-};
+        const status = await contratoLeitura.consultarStatus(documentIdAtual);
+        const nome = STATUS_NOMES[Number(status)] || "Desconhecido";
 
-document.getElementById("btnCarimbar").onclick = async () => {
-  if (!contratoCarteira || !documentIdAtual) return;
+        const badge = document.getElementById("statusGrande");
+        badge.style.display = "flex";
+        badge.className = `gs-inspection-stamp gs-badge gs-badge-${nome === 'Valido' ? 'green' : nome === 'Expirado' ? 'gold' : 'danger'}`;
+        badge.innerHTML = nome === "Valido" ? "✓ ALVARÁ VÁLIDO & AUTÊNTICO" : `STATUS DO DOCUMENTO: ${nome.toUpperCase()}`;
 
-  try {
-    const tx = await contratoCarteira.confirmarVerificacao(documentIdAtual);
-    mostrar("resultadoCarimbar", `Transação enviada: ${tx.hash}\nAguardando confirmação...`);
-    const receipt = await tx.wait();
-    mostrar("resultadoCarimbar", `Confirmado no bloco ${receipt.blockNumber}.\nSeu endereço agora consta no histórico de verificações abaixo.`);
+        // Detalhes Nível 1
+        document.getElementById("detalhesPublicos").style.display = "block";
+        document.getElementById("pubDocId").textContent = documentIdAtual;
+        document.getElementById("pubStatusTexto").textContent = nome;
 
-    // Atualiza o histórico público (nível 1) com a nova confirmação.
-    await carregarHistorico(contratoLeitura, providerLeitura, documentIdAtual);
-  } catch (err) {
-    mostrar("resultadoCarimbar", "Erro: " + decodificarErro(err, contratoCarteira));
-  }
-};
-</script>
+        const badgeMini = document.getElementById("badgePublicoMini");
+        badgeMini.className = `gs-badge gs-badge-${nome === 'Valido' ? 'green' : nome === 'Expirado' ? 'gold' : 'danger'}`;
+        badgeMini.textContent = nome;
+
+        // Prova de Integridade do PDF
+        const arquivo = document.getElementById("publicArquivo").files[0];
+        const banner = document.getElementById("publicBannerIntegridade");
+        if (arquivo) {
+          const r = await contratoLeitura.obterRegistro(documentIdAtual);
+          const hashPdf = await hashArquivo(arquivo);
+          const confere = hashPdf.toLowerCase() === r.documentHash.toLowerCase();
+          banner.style.display = "flex";
+          if (confere) {
+            banner.className = 'gs-alert-banner success';
+            banner.innerHTML = '<div>✓ <strong>ARQUIVO ÍNTEGRO:</strong> O PDF apresentado confere com o original registrado pela Vara.</div>';
+          } else {
+            banner.className = 'gs-alert-banner failure';
+            banner.innerHTML = '<div>✗ <strong>ALERTA DE ADULTERAÇÃO:</strong> O PDF apresentado é DIFERENTE do registrado em blockchain.</div>';
+          }
+        } else {
+          banner.style.display = "none";
+        }
+
+        await carregarHistorico(contratoLeitura, providerLeitura, documentIdAtual);
+        showToast('Consulta Realizada', `Status: ${nome}`, 'success');
+
+      } catch (err) {
+        document.getElementById("statusGrande").style.display = "none";
+        document.getElementById("detalhesPublicos").style.display = "none";
+        showToast('Erro na Consulta', decodificarErro(err, contratoLeitura), 'error');
+      }
+    };
+
+    // --- Conexão Nível 2 ---
+    document.getElementById("btnConectarNivel2").onclick = async () => {
+      if (!window.ethereum) return showToast('MetaMask Não Encontrado', 'Instale a extensão para fiscalização de Nível 2.', 'error');
+      if (!documentIdAtual) return showToast('Atenção', 'Consulte um documento no Nível 1 primeiro.', 'info');
+
+      try {
+        providerCarteira = new ethers.BrowserProvider(window.ethereum);
+        await providerCarteira.send("eth_requestAccounts", []);
+
+        const rede = await providerCarteira.getNetwork();
+        if (rede.chainId !== CHAIN_ID_ESPERADO) {
+          showToast('Rede Incorreta', 'Troque para a rede Hardhat Local (Chain 1337) no MetaMask.', 'error');
+          return;
+        }
+
+        signer = await providerCarteira.getSigner();
+        const endereco = document.getElementById("inputEndereco").value.trim();
+        contratoCarteira = new ethers.Contract(endereco, ABI, signer);
+
+        const conta = await signer.getAddress();
+        document.getElementById("labelConexaoNivel2").textContent = conta.slice(0, 6) + '...' + conta.slice(-4);
+        document.getElementById("contaFiscalAtual").style.display = "block";
+        document.getElementById("contaFiscalAtual").textContent = `Agente Conectado: ${conta}`;
+
+        const r = await contratoCarteira.obterRegistro(documentIdAtual);
+        document.getElementById("detalhesNivel2").style.display = "block";
+        document.getElementById("n2DocHash").textContent = r.documentHash;
+        document.getElementById("n2Emissor").textContent = r.emissor;
+        document.getElementById("n2EmitidoEm").textContent = new Date(Number(r.emitidoEm) * 1000).toLocaleString();
+        document.getElementById("n2ExpiraEm").textContent = r.expiraEm == 0n ? "Sem prazo de expiração" : new Date(Number(r.expiraEm) * 1000).toLocaleString();
+        document.getElementById("n2SubstituidoPor").textContent = r.substituidoPor === ethers.ZeroHash ? "-" : r.substituidoPor;
+
+        document.getElementById("btnCarimbar").style.display = "inline-flex";
+        showToast('Fiscal Conectado', 'Carteira habilitada para carimbo de não-repúdio.', 'success');
+
+      } catch (err) {
+        showToast('Erro ao Conectar', decodificarErro(err, contratoCarteira), 'error');
+      }
+    };
+
+    // --- Carimbo de Não-Repúdio ---
+    document.getElementById("btnCarimbar").onclick = async () => {
+      if (!contratoCarteira || !documentIdAtual) return;
+
+      try {
+        showToast('Submetendo Fiscalização', 'Assine a transação no MetaMask...', 'info');
+        const tx = await contratoCarteira.confirmarVerificacao(documentIdAtual);
+        showToast('Transação Enviada', `Hash: ${tx.hash.slice(0, 10)}... Aguardando confirmação...`, 'info');
+        const receipt = await tx.wait();
+
+        showToast('Fiscalização Confirmada!', `Carimbo gravado no bloco ${receipt.blockNumber}!`, 'success');
+        await carregarHistorico(contratoLeitura, providerLeitura, documentIdAtual);
+
+      } catch (err) {
+        showToast('Erro ao Carimbar', decodificarErro(err, contratoCarteira), 'error');
+      }
+    };
+
+    // Auto-consulta se ID vier na URL
+    window.addEventListener('DOMContentLoaded', () => {
+      if (document.getElementById("inputId").value.trim()) {
+        document.getElementById("btnConsultarPublico").click();
+      }
+    });
+  </script>
 </body>
 </html>

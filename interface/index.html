@@ -1,447 +1,956 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8" />
-<title>VerificaJus Sigilo — Interface mínima (dev)</title>
-<script src="https://unpkg.com/ethers@6/dist/ethers.umd.min.js" type="application/javascript"></script>
-<style>
-  :root { color-scheme: light; }
-  body {
-    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-    max-width: 780px;
-    margin: 2rem auto;
-    padding: 0 1rem;
-    color: #1c1c1c;
-    background: #fafafa;
-  }
-  h1 { font-size: 1.3rem; margin-bottom: 0; }
-  .aviso {
-    background: #fff4e5;
-    border: 1px solid #f0c36d;
-    padding: 0.75rem 1rem;
-    border-radius: 8px;
-    font-size: 0.85rem;
-    margin: 1rem 0 1.5rem;
-  }
-  section {
-    background: white;
-    border: 1px solid #e2e2e2;
-    border-radius: 10px;
-    padding: 1rem 1.25rem;
-    margin-bottom: 1.25rem;
-  }
-  section h2 { font-size: 1rem; margin-top: 0; }
-  label { display: block; font-size: 0.85rem; margin: 0.6rem 0 0.2rem; color: #444; }
-  input {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 0.45rem 0.6rem;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    font-size: 0.9rem;
-  }
-  button {
-    margin-top: 0.8rem;
-    padding: 0.5rem 1rem;
-    border: none;
-    border-radius: 6px;
-    background: #1f2933;
-    color: white;
-    font-size: 0.85rem;
-    cursor: pointer;
-  }
-  button.secundario { background: #52606d; }
-  button:disabled { background: #b0b7bd; cursor: not-allowed; }
-  .resultado {
-    margin-top: 0.8rem;
-    padding: 0.7rem;
-    background: #f4f6f7;
-    border-radius: 6px;
-    font-size: 0.82rem;
-    white-space: pre-wrap;
-    word-break: break-all;
-  }
-  .status-pill {
-    display: inline-block;
-    padding: 0.1rem 0.6rem;
-    border-radius: 999px;
-    font-size: 0.78rem;
-    font-weight: 600;
-  }
-  .status-Valido { background: #d7f5df; color: #1a7a3d; }
-  .status-Expirado { background: #f5e9d7; color: #8a5b1a; }
-  .status-Revogado { background: #f7d9d9; color: #a12b2b; }
-  .status-Substituido { background: #dde3f7; color: #2b3ea1; }
-  #log { max-height: 220px; overflow-y: auto; font-size: 0.78rem; }
-  #contaAtual { font-size: 0.82rem; color: #444; }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VerificaJus Sigilo — Sistema Judicial Descentralizado (gluestack-ui)</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Ethers.js v6 -->
+  <script src="https://unpkg.com/ethers@6/dist/ethers.umd.min.js" type="application/javascript"></script>
 </head>
 <body>
+  <!-- Faixa Institucional Federal -->
+  <div class="gs-federal-stripe"></div>
 
-<h1>VerificaJus Sigilo — Interface mínima</h1>
-<div class="aviso">
-  Ferramenta de <strong>desenvolvimento/teste</strong>, não é a interface final do projeto.
-  A conta conectada já é reconhecida (Vara vs. verificador) e o hash do documento já é
-  calculado a partir de um PDF real — mas ainda não implementa os 3 perfis de acesso
-  diferenciado (Polícia Federal, companhia aérea, Conselho Tutelar), nem QR Code, nem
-  filtragem de dados sensíveis por perfil — isso é responsabilidade do backend com RBAC,
-  que ainda não existe. Aqui você fala <em>diretamente</em> com o contrato pelo MetaMask.
-</div>
+  <!-- Barra Superior (gluestack Navbar) -->
+  <header class="gs-navbar">
+    <div class="gs-navbar-container">
+      <a href="index.html" class="gs-brand">
+        <div class="gs-brand-icon" title="Poder Judiciário — República Federativa do Brasil">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+            <path d="M2 17l10 5 10-5"></path>
+            <path d="M2 12l10 5 10-5"></path>
+          </svg>
+        </div>
+        <div class="gs-brand-info">
+          <h1>
+            VerificaJus
+            <span class="gs-tag-pill">Sigilo Judicial</span>
+          </h1>
+          <p>Poder Judiciário &bull; Vara da Infância e da Juventude</p>
+        </div>
+      </a>
 
-<section>
-  <h2>1. Conexão</h2>
-  <button id="btnConectar">Conectar MetaMask</button>
-  <div id="contaAtual" class="resultado" style="display:none;"></div>
+      <div class="gs-navbar-actions">
+        <!-- Navegação de Abas -->
+        <nav class="gs-nav-tabs">
+          <a href="index.html" class="gs-nav-tab-item active">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+            Painel da Vara
+          </a>
+          <a href="verificar.html" class="gs-nav-tab-item">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            Validação Pública
+          </a>
+        </nav>
 
-  <label for="inputEndereco">Endereço do contrato (copiado do deploy)</label>
-  <input id="inputEndereco" placeholder="0x..." />
-  <button id="btnCarregar" class="secundario">Carregar contrato</button>
-  <div id="papelUsuario" class="resultado" style="display:none;"></div>
-</section>
+        <!-- Botão Conectar Carteira -->
+        <button id="btnConectar" class="gs-btn gs-btn-primary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          <span id="labelConexao">Conectar Carteira</span>
+        </button>
+      </div>
+    </div>
+  </header>
 
-<section id="secRegistrar">
-  <h2>2. Registrar documento</h2>
-  <label for="regRotulo">Identificador interno do documento (ex.: alvara-viagem-0001)</label>
-  <input id="regRotulo" placeholder="alvara-viagem-0001" />
-  <label for="regArquivo">Documento (PDF) — o hash é calculado a partir do conteúdo real do arquivo, no seu navegador</label>
-  <input id="regArquivo" type="file" accept="application/pdf" />
-  <div id="regHashPreview" class="resultado" style="display:none;"></div>
-  <label for="regExpira">Expira em (opcional — deixe vazio para sem expiração)</label>
-  <input id="regExpira" type="datetime-local" />
-  <button id="btnRegistrar">Registrar</button>
-  <div id="resultadoRegistrar" class="resultado" style="display:none;"></div>
-</section>
+  <!-- Container Principal -->
+  <main class="gs-main-container">
 
-<section>
-  <h2>3. Consultar documento</h2>
-  <label for="consRotulo">Identificador interno do documento</label>
-  <input id="consRotulo" placeholder="alvara-viagem-0001" />
-  <label for="consArquivo">(Opcional) Reenviar o mesmo PDF para conferir integridade</label>
-  <input id="consArquivo" type="file" accept="application/pdf" />
-  <button id="btnConsultar">Consultar status</button>
-  <button id="btnRegistroCompleto" class="secundario">Ver registro completo</button>
-  <div id="resultadoConsulta" class="resultado" style="display:none;"></div>
-</section>
+    <!-- Hero Section (gluestack Hero) -->
+    <section class="gs-hero">
+      <h2 class="gs-hero-title">Cartório Digital Criptográfico de Alvarás Judiciais</h2>
+      <p class="gs-hero-desc">
+        Garantia de integridade, autenticidade e vigência temporal de documentos expedidos pela Vara da Infância. <strong>Nenhum dado pessoal de menores de idade é armazenado on-chain</strong> — o contrato atua exclusivamente como um cartório descentralizado de hashes criptográficos.
+      </p>
+      <div class="gs-hero-badges">
+        <span class="gs-badge gs-badge-green"><span class="gs-badge-dot"></span> Rede Hardhat Local (Chain 1337)</span>
+        <span class="gs-badge gs-badge-blue">Privacidade Total / LGPD</span>
+        <span class="gs-badge gs-badge-gold">Expiração Dinâmica On-Chain</span>
+      </div>
+    </section>
 
-<section id="secRevogar">
-  <h2>4. Revogar documento</h2>
-  <label for="revRotulo">Identificador interno do documento</label>
-  <input id="revRotulo" placeholder="alvara-viagem-0001" />
-  <button id="btnRevogar">Revogar</button>
-  <div id="resultadoRevogar" class="resultado" style="display:none;"></div>
-</section>
+    <!-- Grid de Conexão e Papel -->
+    <div class="gs-grid-2col">
+      <!-- Card do Contrato -->
+      <div class="gs-card">
+        <div class="gs-card-header">
+          <div class="gs-card-header-main">
+            <div class="gs-card-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+            </div>
+            <div class="gs-card-title">
+              <h3>Contrato Inteligente</h3>
+              <p>Registry implantado na rede</p>
+            </div>
+          </div>
+          <button id="btnUsarPadrao" class="gs-btn gs-btn-secondary gs-btn-sm">Padrão Local</button>
+        </div>
 
-<section>
-  <h2>5. Log de eventos on-chain</h2>
-  <div id="log" class="resultado">Nenhum evento ainda. Registre ou revogue um documento acima.</div>
-</section>
+        <div class="gs-card-body">
+          <div class="gs-form-control">
+            <label class="gs-form-label" for="inputEndereco">
+              <span>Endereço do Registry</span>
+              <span class="gs-form-hint">DocumentoSigilosoRegistry</span>
+            </label>
+            <div class="gs-input-slot-row">
+              <input type="text" id="inputEndereco" class="gs-input gs-mono" placeholder="0x5FbDB2315678afecb367f032d93F642f64180aa3" />
+              <button id="btnCarregar" class="gs-btn gs-btn-secondary">Carregar</button>
+            </div>
+          </div>
+        </div>
+      </div>
 
-<script>
-// ABI mínima e equivalente à extraída do Hardhat (artifacts/.../DocumentoSigilosoRegistry.json)
-// ou do botão "ABI" do Remix. Formato "human-readable" do ethers.js.
-const ABI = [
-  "function vara() view returns (address)",
-  "function registrarDocumento(bytes32 documentId, bytes32 documentHash, uint64 expiraEm)",
-  "function revogarDocumento(bytes32 documentId)",
-  "function substituirDocumento(bytes32 documentIdAntigo, bytes32 documentIdNovo, bytes32 documentHashNovo, uint64 expiraEmNovo)",
-  "function consultarStatus(bytes32 documentId) view returns (uint8)",
-  "function obterRegistro(bytes32 documentId) view returns (bytes32 documentHash, address emissor, uint64 emitidoEm, uint64 expiraEm, uint8 status, bytes32 substituidoPor)",
-  "function transferirVara(address novaVara)",
-  "event DocumentoRegistrado(bytes32 indexed documentId, bytes32 indexed documentHash, address indexed emissor, uint64 expiraEm)",
-  "event DocumentoRevogado(bytes32 indexed documentId, address indexed revogadoPor, uint64 revogadoEm)",
-  "event DocumentoSubstituido(bytes32 indexed documentIdAntigo, bytes32 indexed documentIdNovo, address indexed responsavel)",
-  "error ApenasVara()",
-  "error DocumentIdInvalido()",
-  "error DocumentHashInvalido()",
-  "error EnderecoInvalido()",
-  "error DocumentoJaRegistrado(bytes32 documentId)",
-  "error DocumentoInexistente(bytes32 documentId)",
-  "error DocumentoNaoValido(bytes32 documentId, uint8 statusAtual)"
-];
+      <!-- Card de Papel & Autoridade -->
+      <div class="gs-card">
+        <div class="gs-card-header">
+          <div class="gs-card-header-main">
+            <div class="gs-card-icon icon-gold">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            </div>
+            <div class="gs-card-title">
+              <h3>Identidade & Papel</h3>
+              <p>Validação da Vara emissora</p>
+            </div>
+          </div>
+          <span id="badgePapel" class="gs-badge gs-badge-gold">Aguardando Conexão</span>
+        </div>
 
-const STATUS_NOMES = ["Valido", "Expirado", "Revogado", "Substituido"];
+        <div class="gs-card-body">
+          <p id="infoPapel" style="font-size: 0.9rem; color: var(--gs-text-muted);">
+            Conecte sua carteira MetaMask para verificar se o seu endereço é a autoridade da Vara ou um agente verificador.
+          </p>
+          <div id="detalhesConta" class="gs-mono" style="display: none; font-size: 0.82rem; color: var(--gs-text-body); background: var(--gs-bg-subtle); padding: 0.85rem 1rem; border-radius: var(--gs-radius-md); border: 1px solid var(--gs-border);"></div>
+        </div>
+      </div>
+    </div>
 
-let provider, signer, contrato;
-let isVara = false; // preenchido depois de carregar o contrato, comparando com vara()
+    <!-- Navegação de Abas das Funcionalidades (gluestack Tabs) -->
+    <div class="gs-tabs-bar">
+      <button id="tabBtnRegistrar" class="gs-tab-button active" onclick="trocarAba('registrar')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        1. Registrar Alvará / Termo
+      </button>
+      <button id="tabBtnConsultar" class="gs-tab-button" onclick="trocarAba('consultar')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        2. Consultar & Integridade
+      </button>
+      <button id="tabBtnSubstituir" class="gs-tab-button" onclick="trocarAba('substituir')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
+        3. Substituir / Revogar
+      </button>
+      <button id="tabBtnAuditoria" class="gs-tab-button" onclick="trocarAba('auditoria')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+        4. Auditoria On-Chain
+      </button>
+    </div>
 
-// Sem isso, trocar de conta/rede dentro do MetaMask não atualiza a página —
-// era exatamente o problema que te confundiu (ficava conectado com a conta/rede
-// antiga até clicar em "Conectar MetaMask" de novo). Recarregar a página é a
-// forma mais simples e robusta de evitar estado desatualizado.
-if (window.ethereum) {
-  window.ethereum.on("accountsChanged", () => window.location.reload());
-  window.ethereum.on("chainChanged", () => window.location.reload());
-}
+    <!-- =========================================================================
+         ABA 1: REGISTRAR DOCUMENTO
+         ========================================================================= -->
+    <div id="abaRegistrar" class="gs-tab-content">
+      <div class="gs-card" id="secRegistrar">
+        <div class="gs-card-header">
+          <div class="gs-card-header-main">
+            <div class="gs-card-icon icon-green">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+            </div>
+            <div class="gs-card-title">
+              <h3>Registrar Novo Alvará Judicial</h3>
+              <p>Ação restrita à Vara da Infância e da Juventude (onlyVara)</p>
+            </div>
+          </div>
+          <span class="gs-badge gs-badge-green">Estado Inicial: Válido</span>
+        </div>
 
-const CHAIN_ID_ESPERADO = 1337n;
+        <div class="gs-card-body">
+          <div class="gs-grid-2col">
+            <div style="display:flex; flex-direction:column; gap:1.25rem;">
+              <div class="gs-form-control">
+                <label class="gs-form-label" for="regRotulo">
+                  <span>Identificador Interno (UUID / Rótulo)</span>
+                  <span class="gs-form-hint">Não sensível</span>
+                </label>
+                <input type="text" id="regRotulo" class="gs-input" placeholder="ex: alvara-viagem-2026-001" />
+                <div class="gs-mono" style="font-size: 0.78rem; color: var(--gs-text-muted); margin-top: 0.25rem;">
+                  documentId calculado: <span id="regIdHash" style="color: var(--gs-text-title); font-weight: 500;">-</span>
+                </div>
+              </div>
 
-function rotuloParaHash(rotulo) {
-  return ethers.keccak256(ethers.toUtf8Bytes(rotulo.trim()));
-}
+              <div class="gs-form-control">
+                <label class="gs-form-label" for="regExpira">
+                  <span>Prazo de Validade / Expiração</span>
+                  <span class="gs-form-hint">Opcional</span>
+                </label>
+                <input type="datetime-local" id="regExpira" class="gs-input" />
+                <div class="gs-chips-group">
+                  <button type="button" class="gs-chip-item" onclick="definirValidade(0)">Sem Expiração</button>
+                  <button type="button" class="gs-chip-item" onclick="definirValidade(30)">30 dias</button>
+                  <button type="button" class="gs-chip-item" onclick="definirValidade(90)">90 dias</button>
+                  <button type="button" class="gs-chip-item" onclick="definirValidade(180)">180 dias</button>
+                  <button type="button" class="gs-chip-item" onclick="definirValidade(365)">1 ano</button>
+                </div>
+              </div>
+            </div>
 
-// Lê o arquivo de verdade (ex.: o PDF do alvará) e calcula o keccak256 do
-// conteúdo real — isso é o que substitui o "rótulo simulado" da versão
-// anterior. O cálculo acontece inteiramente no navegador; o arquivo em si
-// nunca é enviado a lugar nenhum, só o hash resultante vai para o contrato.
-async function hashArquivo(file) {
-  const buffer = await file.arrayBuffer();
-  return ethers.keccak256(new Uint8Array(buffer));
-}
+            <div style="display:flex; flex-direction:column; gap:1.25rem;">
+              <div class="gs-form-control">
+                <label class="gs-form-label">
+                  <span>Arquivo Oficial do Alvará (PDF)</span>
+                  <span class="gs-form-hint">Hash calculado no seu navegador</span>
+                </label>
+                <div class="gs-dropzone" id="regDropzone">
+                  <input type="file" id="regArquivo" accept="application/pdf" />
+                  <div class="gs-dropzone-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                  </div>
+                  <div class="gs-dropzone-title" id="regDropzoneText">Clique ou arraste o PDF oficial aqui</div>
+                  <div class="gs-dropzone-desc">O arquivo original nunca sai do seu computador. Apenas o hash Keccak256 é gravado.</div>
+                </div>
 
-// Atualiza a seção 1 (papel do usuário) e mostra/esconde as ações restritas
-// à vara — isto é o "reconhecimento de conta" que faz o papel de autenticação
-// nesta etapa (ver docs/01-arquitetura.md, seção 3).
-function atualizarPapelUsuario(enderecoConectado, enderecoVara) {
-  isVara = enderecoConectado.toLowerCase() === enderecoVara.toLowerCase();
+                <div id="regArquivoInfo" class="gs-file-preview-card" style="display:none;">
+                  <div style="display:flex; align-items:center; gap:0.75rem; overflow:hidden;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                    <div style="overflow:hidden;">
+                      <div id="regFileName" style="font-weight:600; font-size:0.88rem; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">documento.pdf</div>
+                      <div id="regFileSize" style="font-size:0.78rem; color:var(--gs-text-muted);">0 KB</div>
+                    </div>
+                  </div>
+                  <span class="gs-badge gs-badge-green">PDF Pronto</span>
+                </div>
+              </div>
+            </div>
+          </div>
 
-  const el = document.getElementById("papelUsuario");
-  el.style.display = "block";
-  el.textContent = isVara
-    ? `Você é a Vara (${enderecoConectado}) — pode registrar e revogar documentos.`
-    : `Você está conectado como verificador (${enderecoConectado}) — só pode consultar. ` +
-      `A Vara deste contrato é ${enderecoVara}.`;
-  el.style.background = isVara ? "" : "#f4f6f7";
+          <div id="regHashBox" class="gs-code-display" style="display:none;">
+            <div style="font-size:0.78rem; color:var(--gs-text-muted); margin-bottom:0.25rem;">documentHash (Keccak256 do conteúdo do PDF):</div>
+            <div id="regCalculatedHash" style="color: var(--gs-federal-green); font-weight: 600;">-</div>
+          </div>
 
-  const secRegistrar = document.getElementById("secRegistrar");
-  const secRevogar = document.getElementById("secRevogar");
-  for (const sec of [secRegistrar, secRevogar]) {
-    sec.style.opacity = isVara ? "1" : "0.5";
-    sec.querySelectorAll("input, button").forEach((el) => (el.disabled = !isVara));
-  }
-}
+          <div style="display: flex; justify-content: flex-end; padding-top: 1rem; border-top: 1px solid var(--gs-border-subtle);">
+            <button id="btnRegistrar" class="gs-btn gs-btn-green" style="padding: 0 2rem;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+              Registrar Alvará na Blockchain
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
 
-function logEvento(texto) {
-  const el = document.getElementById("log");
-  if (el.textContent.startsWith("Nenhum evento")) el.textContent = "";
-  const linha = `[${new Date().toLocaleTimeString()}] ${texto}\n`;
-  el.textContent = linha + el.textContent;
-}
+    <!-- =========================================================================
+         ABA 2: CONSULTAR & INTEGRIDADE
+         ========================================================================= -->
+    <div id="abaConsultar" class="gs-tab-content" style="display:none;">
+      <div class="gs-card">
+        <div class="gs-card-header">
+          <div class="gs-card-header-main">
+            <div class="gs-card-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            </div>
+            <div class="gs-card-title">
+              <h3>Consultar Vigência & Prova de Integridade</h3>
+              <p>Conferência de status do alvará e validação byte a byte de arquivo</p>
+            </div>
+          </div>
+          <span class="gs-badge gs-badge-blue">Acesso Livre</span>
+        </div>
 
-function mostrar(id, texto) {
-  const el = document.getElementById(id);
-  el.style.display = "block";
-  el.textContent = texto;
-}
+        <div class="gs-card-body">
+          <div class="gs-grid-2col">
+            <div class="gs-form-control">
+              <label class="gs-form-label" for="consRotulo">
+                <span>Identificador do Documento</span>
+                <span class="gs-form-hint">Rótulo interno ou Hash Bytes32</span>
+              </label>
+              <input type="text" id="consRotulo" class="gs-input" placeholder="ex: alvara-viagem-2026-001 ou 0x..." />
+            </div>
 
-function decodificarErro(err, contratoRef) {
-  const data = err?.data ?? err?.info?.error?.data;
-  if (data && contratoRef) {
-    try {
-      const decoded = contratoRef.interface.parseError(data);
-      return `${decoded.name}(${decoded.args.map(String).join(", ")})`;
-    } catch (_) {
-      // segue para a mensagem padrão
+            <div class="gs-form-control">
+              <label class="gs-form-label">
+                <span>(Opcional) Reenviar PDF para Prova de Integridade</span>
+                <span class="gs-form-hint">Compara byte a byte</span>
+              </label>
+              <div class="gs-dropzone" id="consDropzone" style="padding: 1.25rem;">
+                <input type="file" id="consArquivo" accept="application/pdf" />
+                <div class="gs-dropzone-title" id="consDropzoneText" style="font-size:0.88rem;">Clique ou arraste o PDF para conferência</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+            <button id="btnConsultar" class="gs-btn gs-btn-primary">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              Consultar Status
+            </button>
+            <button id="btnRegistroCompleto" class="gs-btn gs-btn-secondary">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+              Ver Registro Completo
+            </button>
+          </div>
+
+          <!-- Resultado da Consulta -->
+          <div id="resultadoConsultaBox" style="display:none; margin-top: 1rem;">
+            <!-- Carimbo de Status -->
+            <div id="statusCarimbo" class="gs-inspection-stamp"></div>
+
+            <!-- Banner de Integridade do PDF -->
+            <div id="bannerIntegridade" class="gs-alert-banner" style="display:none;"></div>
+
+            <!-- Metadados do Registro -->
+            <div style="background: var(--gs-bg-subtle); border: 1px solid var(--gs-border); border-radius: var(--gs-radius-lg); padding: 1.5rem; margin-top: 1.5rem;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.75rem; padding-bottom:0.75rem; border-bottom:1px solid var(--gs-border-subtle);">
+                <strong class="gs-heading" style="font-size:1.05rem;">Registro Gravado em Cartório On-Chain</strong>
+                <span id="badgeStatusMini" class="gs-badge">-</span>
+              </div>
+
+              <div class="gs-meta-table">
+                <div class="gs-meta-label">documentId:</div>
+                <div class="gs-meta-value gs-mono" id="resDocId">-</div>
+
+                <div class="gs-meta-label">documentHash:</div>
+                <div class="gs-meta-value gs-mono" id="resDocHash">-</div>
+
+                <div class="gs-meta-label">Emissor Autorizado:</div>
+                <div class="gs-meta-value gs-mono" id="resEmissor">-</div>
+
+                <div class="gs-meta-label">Data de Emissão:</div>
+                <div class="gs-meta-value" id="resEmitidoEm">-</div>
+
+                <div class="gs-meta-label">Prazo de Expiração:</div>
+                <div class="gs-meta-value" id="resExpiraEm">-</div>
+
+                <div class="gs-meta-label">Documento Sucessor:</div>
+                <div class="gs-meta-value gs-mono" id="resSubstituidoPor">-</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- =========================================================================
+         ABA 3: SUBSTITUIR & REVOGAR
+         ========================================================================= -->
+    <div id="abaSubstituir" class="gs-tab-content" style="display:none;">
+      <div class="gs-grid-2col">
+        <!-- Substituir Documento -->
+        <div class="gs-card" id="secSubstituir">
+          <div class="gs-card-header">
+            <div class="gs-card-header-main">
+              <div class="gs-card-icon icon-gold">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
+              </div>
+              <div class="gs-card-title">
+                <h3>Substituir Alvará</h3>
+                <p>Invalida versão anterior e encadeia sucessor</p>
+              </div>
+            </div>
+            <span class="gs-badge gs-badge-gold">Substituição</span>
+          </div>
+
+          <div class="gs-card-body">
+            <div class="gs-form-control">
+              <label class="gs-form-label" for="subIdAntigo">Identificador do Alvará Antigo</label>
+              <input type="text" id="subIdAntigo" class="gs-input" placeholder="ex: alvara-viagem-2026-001" />
+            </div>
+
+            <div class="gs-form-control">
+              <label class="gs-form-label" for="subIdNovo">Identificador do Novo Alvará</label>
+              <input type="text" id="subIdNovo" class="gs-input" placeholder="ex: alvara-viagem-2026-001-v2" />
+            </div>
+
+            <div class="gs-form-control">
+              <label class="gs-form-label">Novo Arquivo PDF</label>
+              <div class="gs-dropzone" id="subDropzone" style="padding: 1.25rem;">
+                <input type="file" id="subArquivo" accept="application/pdf" />
+                <div class="gs-dropzone-title" id="subDropzoneText" style="font-size:0.88rem;">Carregar novo PDF</div>
+              </div>
+            </div>
+
+            <div class="gs-form-control">
+              <label class="gs-form-label" for="subExpira">Nova Expiração (Opcional)</label>
+              <input type="datetime-local" id="subExpira" class="gs-input" />
+            </div>
+
+            <button id="btnSubstituir" class="gs-btn gs-btn-primary" style="width: 100%; margin-top: 0.5rem;">
+              Efetuar Substituição On-Chain
+            </button>
+          </div>
+        </div>
+
+        <!-- Revogar Documento -->
+        <div class="gs-card" id="secRevogar">
+          <div class="gs-card-header">
+            <div class="gs-card-header-main">
+              <div class="gs-card-icon icon-danger">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+              </div>
+              <div class="gs-card-title">
+                <h3>Revogar Alvará Definitivamente</h3>
+                <p>Cancela a vigência em caso de ordem judicial</p>
+              </div>
+            </div>
+            <span class="gs-badge gs-badge-danger">Ação Irreversível</span>
+          </div>
+
+          <div class="gs-card-body">
+            <div class="gs-form-control">
+              <label class="gs-form-label" for="revRotulo">Identificador do Documento a Revogar</label>
+              <input type="text" id="revRotulo" class="gs-input" placeholder="ex: alvara-viagem-2026-001" />
+            </div>
+
+            <div class="gs-callout gs-callout-danger">
+              <div>⚠️ <strong>Aviso Judicial:</strong> A revogação altera imediatamente o status do documento para <code>Revogado</code>. Documentos que já expiraram pelo decurso do prazo não podem ser revogados.</div>
+            </div>
+
+            <button id="btnRevogar" class="gs-btn gs-btn-danger" style="width: 100%; margin-top: 0.5rem;">
+              Revogar Alvará
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- =========================================================================
+         ABA 4: AUDITORIA ON-CHAIN
+         ========================================================================= -->
+    <div id="abaAuditoria" class="gs-tab-content" style="display:none;">
+      <div class="gs-card">
+        <div class="gs-card-header">
+          <div class="gs-card-header-main">
+            <div class="gs-card-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+            </div>
+            <div class="gs-card-title">
+              <h3>Feed de Auditoria On-Chain em Tempo Real</h3>
+              <p>Eventos emitidos pela máquina virtual Ethereum (EVM)</p>
+            </div>
+          </div>
+          <button id="btnLimparLog" class="gs-btn gs-btn-secondary gs-btn-sm">Limpar Visor</button>
+        </div>
+
+        <div class="gs-card-body">
+          <div id="eventLogContainer" class="gs-log-container">
+            <div style="color: var(--gs-text-muted); font-size: 0.85rem; padding: 1.5rem; text-align: center;">
+              Nenhum evento registrado nesta sessão. As transações efetuadas aparecerão aqui automaticamente.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Container de Toasts Flutuantes (gluestack Toast) -->
+  <div id="toastContainer" class="gs-toast-wrapper"></div>
+
+  <!-- Rodapé -->
+  <footer class="gs-footer">
+    <div class="gs-footer-container">
+      <div>
+        <strong>VerificaJus Sigilo</strong> &bull; Sistema de Cartório Criptográfico para Varas da Infância e Juventude
+      </div>
+      <div>
+        Poder Judiciário &bull; República Federativa do Brasil &bull; Hardhat Local (Chain 1337)
+      </div>
+    </div>
+  </footer>
+
+  <!-- Lógica da Aplicação -->
+  <script>
+    const ABI = [
+      "function vara() view returns (address)",
+      "function registrarDocumento(bytes32 documentId, bytes32 documentHash, uint64 expiraEm)",
+      "function revogarDocumento(bytes32 documentId)",
+      "function substituirDocumento(bytes32 documentIdAntigo, bytes32 documentIdNovo, bytes32 documentHashNovo, uint64 expiraEmNovo)",
+      "function consultarStatus(bytes32 documentId) view returns (uint8)",
+      "function obterRegistro(bytes32 documentId) view returns (bytes32 documentHash, address emissor, uint64 emitidoEm, uint64 expiraEm, uint8 status, bytes32 substituidoPor)",
+      "function transferirVara(address novaVara)",
+      "function confirmarVerificacao(bytes32 documentId)",
+      "event DocumentoRegistrado(bytes32 indexed documentId, bytes32 indexed documentHash, address indexed emissor, uint64 expiraEm)",
+      "event DocumentoRevogado(bytes32 indexed documentId, address indexed revogadoPor, uint64 revogadoEm)",
+      "event DocumentoSubstituido(bytes32 indexed documentIdAntigo, bytes32 indexed documentIdNovo, address indexed responsavel)",
+      "event DocumentoVerificadoPor(bytes32 indexed documentId, address indexed verificador, uint64 verificadoEm)",
+      "error ApenasVara()",
+      "error DocumentIdInvalido()",
+      "error DocumentHashInvalido()",
+      "error EnderecoInvalido()",
+      "error DocumentoJaRegistrado(bytes32 documentId)",
+      "error DocumentoInexistente(bytes32 documentId)",
+      "error DocumentoNaoValido(bytes32 documentId, uint8 statusAtual)"
+    ];
+
+    const STATUS_NOMES = ["Valido", "Expirado", "Revogado", "Substituido"];
+    const CHAIN_ID_ESPERADO = 1337n;
+    const ENDERECO_PADRAO = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+
+    let provider, signer, contrato;
+    let isVara = false;
+
+    // --- Navegação de Abas ---
+    window.trocarAba = function(abaId) {
+      document.querySelectorAll('.gs-tab-content').forEach(el => el.style.display = 'none');
+      document.querySelectorAll('.gs-tab-button').forEach(el => el.classList.remove('active'));
+
+      if (abaId === 'registrar') {
+        document.getElementById('abaRegistrar').style.display = 'block';
+        document.getElementById('tabBtnRegistrar').classList.add('active');
+      } else if (abaId === 'consultar') {
+        document.getElementById('abaConsultar').style.display = 'block';
+        document.getElementById('tabBtnConsultar').classList.add('active');
+      } else if (abaId === 'substituir') {
+        document.getElementById('abaSubstituir').style.display = 'block';
+        document.getElementById('tabBtnSubstituir').classList.add('active');
+      } else if (abaId === 'auditoria') {
+        document.getElementById('abaAuditoria').style.display = 'block';
+        document.getElementById('tabBtnAuditoria').classList.add('active');
+      }
+    };
+
+    // --- Toasts Flutuantes ---
+    function showToast(titulo, mensagem, tipo = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `gs-toast-box toast-${tipo}`;
+      toast.innerHTML = `
+        <div>
+          <h4 style="font-size:0.92rem; font-weight:600; margin-bottom:0.2rem; color:var(--gs-text-title);">${titulo}</h4>
+          <p style="font-size:0.84rem; color:var(--gs-text-muted);">${mensagem}</p>
+        </div>
+      `;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(12px)';
+        setTimeout(() => toast.remove(), 250);
+      }, 4500);
     }
-  }
-  return err?.reason || err?.shortMessage || err?.message || String(err);
-}
 
-async function trocarParaRedeLocal() {
-  const CHAIN_ID_HEX = "0x539"; // 1337 em hexadecimal
-  try {
-    await window.ethereum.request({
-      method: "wallet_switchEthereumChain",
-      params: [{ chainId: CHAIN_ID_HEX }],
-    });
-  } catch (switchError) {
-    // 4902 = essa rede ainda não está cadastrada nesse MetaMask; cadastra e tenta de novo.
-    if (switchError.code === 4902) {
-      await window.ethereum.request({
-        method: "wallet_addEthereumChain",
-        params: [
-          {
-            chainId: CHAIN_ID_HEX,
-            chainName: "Hardhat Local",
-            rpcUrls: ["http://127.0.0.1:8545"],
-            nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
-          },
-        ],
-      });
-    } else {
-      throw switchError;
+    // --- Utilitários de Hash ---
+    function rotuloParaHash(rotulo) {
+      const v = rotulo.trim();
+      if (/^0x[0-9a-fA-F]{64}$/.test(v)) return v;
+      return ethers.keccak256(ethers.toUtf8Bytes(v));
     }
-  }
-}
 
-document.getElementById("btnConectar").onclick = async () => {
-  if (!window.ethereum) {
-    alert("MetaMask não encontrado. Instale a extensão para continuar.");
-    return;
-  }
-  provider = new ethers.BrowserProvider(window.ethereum);
-  await provider.send("eth_requestAccounts", []);
-
-  const rede = await provider.getNetwork();
-  const el = document.getElementById("contaAtual");
-
-  if (rede.chainId !== CHAIN_ID_ESPERADO) {
-    el.style.display = "block";
-    el.style.background = "#fff4e5";
-    el.textContent = `Rede atual (chainId ${rede.chainId}) é diferente da esperada (${CHAIN_ID_ESPERADO}).\nPedindo ao MetaMask para trocar — aprove o popup...`;
-    try {
-      await trocarParaRedeLocal();
-      // Se o MetaMask trocar de verdade, o evento "chainChanged" (listener
-      // registrado mais acima) recarrega a página sozinho. Não precisamos
-      // continuar daqui — a próxima carga já vem com a rede certa.
-      return;
-    } catch (err) {
-      el.style.background = "#f7d9d9";
-      el.textContent =
-        `Não foi possível trocar automaticamente de rede: ${err?.message || err}\n\n` +
-        `Abra o MetaMask manualmente (a partir desta aba) e selecione a rede com chainId 1337.`;
-      return;
+    async function hashArquivo(file) {
+      const buffer = await file.arrayBuffer();
+      return ethers.keccak256(new Uint8Array(buffer));
     }
-  }
 
-  signer = await provider.getSigner();
-  el.style.display = "block";
-  el.style.background = "";
-  el.textContent = `Conectado: ${await signer.getAddress()}\nRede: chainId ${rede.chainId}`;
-};
+    function formatBytes(bytes) {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
 
-document.getElementById("btnCarregar").onclick = async () => {
-  const endereco = document.getElementById("inputEndereco").value.trim();
-  if (!ethers.isAddress(endereco)) {
-    alert("Endereço de contrato inválido.");
-    return;
-  }
-  if (!signer) {
-    alert("Conecte o MetaMask primeiro.");
-    return;
-  }
+    // --- Presets de Expiração ---
+    window.definirValidade = function(dias) {
+      const input = document.getElementById('regExpira');
+      if (dias === 0) {
+        input.value = '';
+        return;
+      }
+      const data = new Date();
+      data.setDate(data.getDate() + dias);
+      input.value = data.toISOString().slice(0, 16);
+    };
 
-  // Se "Carregar contrato" for clicado mais de uma vez (ex.: trocou o endereço,
-  // ou só clicou de novo por engano), os ouvintes de evento do contrato anterior
-  // ficam presos ao provider e continuam disparando. Removemos antes de recriar,
-  // para nunca duplicar entradas no log.
-  if (contrato) {
-    await contrato.removeAllListeners();
-  }
+    // --- Gerenciador de Endereço ---
+    const inputEndereco = document.getElementById('inputEndereco');
+    inputEndereco.value = localStorage.getItem('verificajus_contract_addr') || ENDERECO_PADRAO;
 
-  contrato = new ethers.Contract(endereco, ABI, signer);
+    document.getElementById('btnUsarPadrao').onclick = () => {
+      inputEndereco.value = ENDERECO_PADRAO;
+      localStorage.setItem('verificajus_contract_addr', ENDERECO_PADRAO);
+      showToast('Endereço Atualizado', 'Endereço padrão local preenchido.', 'info');
+    };
 
-  // Assina os três eventos do contrato para o log em tempo real.
-  contrato.on("DocumentoRegistrado", (documentId, documentHash, emissor, expiraEm) => {
-    logEvento(`DocumentoRegistrado documentId=${documentId} emissor=${emissor}`);
-  });
-  contrato.on("DocumentoRevogado", (documentId, revogadoPor) => {
-    logEvento(`DocumentoRevogado documentId=${documentId} revogadoPor=${revogadoPor}`);
-  });
-  contrato.on("DocumentoSubstituido", (idAntigo, idNovo) => {
-    logEvento(`DocumentoSubstituido antigo=${idAntigo} novo=${idNovo}`);
-  });
+    // --- Troca de Rede Automática ---
+    async function trocarParaRedeLocal() {
+      const CHAIN_ID_HEX = "0x539"; // 1337
+      try {
+        await window.ethereum.request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: CHAIN_ID_HEX }],
+        });
+      } catch (switchError) {
+        if (switchError.code === 4902) {
+          await window.ethereum.request({
+            method: "wallet_addEthereumChain",
+            params: [{
+              chainId: CHAIN_ID_HEX,
+              chainName: "Hardhat Local",
+              rpcUrls: ["http://127.0.0.1:8545"],
+              nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+            }],
+          });
+        } else {
+          throw switchError;
+        }
+      }
+    }
 
-  // "Autenticação" desta etapa: pergunta ao próprio contrato quem é a vara,
-  // compara com a conta conectada, e ajusta a interface de acordo — em vez
-  // de um login separado, a identidade é a mesma que já protege as funções
-  // on-chain (onlyVara).
-  const enderecoVara = await contrato.vara();
-  const enderecoConectado = await signer.getAddress();
-  atualizarPapelUsuario(enderecoConectado, enderecoVara);
+    if (window.ethereum) {
+      window.ethereum.on("accountsChanged", () => window.location.reload());
+      window.ethereum.on("chainChanged", () => window.location.reload());
+    }
 
-  alert("Contrato carregado. Já pode registrar/consultar/revogar.");
-};
-
-// Mostra o hash calculado assim que um arquivo é escolhido, antes mesmo de
-// clicar em "Registrar" — dá pra conferir visualmente o que vai on-chain.
-document.getElementById("regArquivo").addEventListener("change", async (ev) => {
-  const file = ev.target.files[0];
-  const el = document.getElementById("regHashPreview");
-  if (!file) {
-    el.style.display = "none";
-    return;
-  }
-  const hash = await hashArquivo(file);
-  el.style.display = "block";
-  el.textContent = `Arquivo: ${file.name} (${file.size} bytes)\ndocumentHash calculado: ${hash}`;
-});
-
-document.getElementById("btnRegistrar").onclick = async () => {
-  if (!contrato) return alert("Carregue o contrato primeiro.");
-  const rotulo = document.getElementById("regRotulo").value;
-  const arquivo = document.getElementById("regArquivo").files[0];
-  const expiraStr = document.getElementById("regExpira").value;
-  if (!rotulo || !arquivo) return alert("Preencha o identificador e escolha o arquivo do documento.");
-
-  const documentId = rotuloParaHash(rotulo);
-  const documentHash = await hashArquivo(arquivo);
-  const expiraEm = expiraStr ? Math.floor(new Date(expiraStr).getTime() / 1000) : 0;
-
-  try {
-    const tx = await contrato.registrarDocumento(documentId, documentHash, expiraEm);
-    mostrar("resultadoRegistrar", `Transação enviada: ${tx.hash}\nAguardando confirmação...`);
-    const receipt = await tx.wait();
-    mostrar(
-      "resultadoRegistrar",
-      `Confirmado no bloco ${receipt.blockNumber}\ntx: ${receipt.hash}\ndocumentId: ${documentId}`
-    );
-  } catch (err) {
-    mostrar("resultadoRegistrar", "Erro: " + decodificarErro(err, contrato));
-  }
-};
-
-async function consultar(retornarCompleto) {
-  if (!contrato) return alert("Carregue o contrato primeiro.");
-  const rotulo = document.getElementById("consRotulo").value;
-  if (!rotulo) return alert("Preencha o rótulo do documento.");
-  const documentId = rotuloParaHash(rotulo);
-
-  try {
-    if (retornarCompleto) {
-      const r = await contrato.obterRegistro(documentId);
-
-      let linhaIntegridade = "";
-      const arquivo = document.getElementById("consArquivo").files[0];
-      if (arquivo) {
-        const hashReenviado = await hashArquivo(arquivo);
-        const confere = hashReenviado.toLowerCase() === r.documentHash.toLowerCase();
-        linhaIntegridade =
-          `\n\nArquivo reenviado: ${arquivo.name}\n` +
-          `Hash calculado agora:  ${hashReenviado}\n` +
-          `Hash gravado on-chain: ${r.documentHash}\n` +
-          (confere
-            ? "Resultado: ÍNTEGRO — o arquivo é exatamente o que foi registrado."
-            : "Resultado: NÃO CONFERE — este arquivo NÃO é o que foi registrado (adulterado ou é outro documento).");
+    // --- Conexão MetaMask ---
+    async function conectarCarteira() {
+      if (!window.ethereum) {
+        showToast('MetaMask Não Encontrado', 'Por favor, instale a extensão MetaMask.', 'error');
+        return;
       }
 
-      mostrar(
-        "resultadoConsulta",
-        `documentId: ${documentId}\n` +
-        `documentHash: ${r.documentHash}\n` +
-        `emissor: ${r.emissor}\n` +
-        `emitidoEm: ${new Date(Number(r.emitidoEm) * 1000).toLocaleString()}\n` +
-        `expiraEm: ${r.expiraEm == 0n ? "sem expiração" : new Date(Number(r.expiraEm) * 1000).toLocaleString()}\n` +
-        `status: ${STATUS_NOMES[Number(r.status)]}\n` +
-        `substituidoPor: ${r.substituidoPor === ethers.ZeroHash ? "-" : r.substituidoPor}` +
-        linhaIntegridade
-      );
-    } else {
-      const status = await contrato.consultarStatus(documentId);
-      mostrar("resultadoConsulta", `documentId: ${documentId}\nstatus: ${STATUS_NOMES[Number(status)]}`);
+      try {
+        provider = new ethers.BrowserProvider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        const rede = await provider.getNetwork();
+
+        if (rede.chainId !== CHAIN_ID_ESPERADO) {
+          showToast('Rede Incorreta', 'Solicitando troca para Hardhat Local (Chain 1337)...', 'info');
+          await trocarParaRedeLocal();
+          return;
+        }
+
+        signer = await provider.getSigner();
+        const address = await signer.getAddress();
+
+        document.getElementById('labelConexao').textContent = address.slice(0, 6) + '...' + address.slice(-4);
+        document.getElementById('btnConectar').classList.replace('gs-btn-primary', 'gs-btn-secondary');
+
+        await carregarContrato();
+        showToast('Carteira Conectada', `Endereço: ${address.slice(0, 8)}...`, 'success');
+      } catch (err) {
+        showToast('Erro de Conexão', err?.message || String(err), 'error');
+      }
     }
-  } catch (err) {
-    mostrar("resultadoConsulta", "Erro: " + decodificarErro(err, contrato));
-  }
-}
 
-document.getElementById("btnConsultar").onclick = () => consultar(false);
-document.getElementById("btnRegistroCompleto").onclick = () => consultar(true);
+    document.getElementById('btnConectar').onclick = conectarCarteira;
 
-document.getElementById("btnRevogar").onclick = async () => {
-  if (!contrato) return alert("Carregue o contrato primeiro.");
-  const rotulo = document.getElementById("revRotulo").value;
-  if (!rotulo) return alert("Preencha o rótulo do documento.");
-  const documentId = rotuloParaHash(rotulo);
+    // --- Carregar Contrato ---
+    async function carregarContrato() {
+      const endereco = inputEndereco.value.trim();
+      if (!ethers.isAddress(endereco)) {
+        showToast('Endereço Inválido', 'Insira um endereço Ethereum válido (0x...).', 'error');
+        return;
+      }
 
-  try {
-    const tx = await contrato.revogarDocumento(documentId);
-    mostrar("resultadoRevogar", `Transação enviada: ${tx.hash}\nAguardando confirmação...`);
-    const receipt = await tx.wait();
-    mostrar("resultadoRevogar", `Confirmado no bloco ${receipt.blockNumber}\ntx: ${receipt.hash}`);
-  } catch (err) {
-    mostrar("resultadoRevogar", "Erro: " + decodificarErro(err, contrato));
-  }
-};
-</script>
+      localStorage.setItem('verificajus_contract_addr', endereco);
+
+      if (!signer && window.ethereum) {
+        provider = new ethers.BrowserProvider(window.ethereum);
+        signer = await provider.getSigner();
+      }
+
+      if (contrato) {
+        await contrato.removeAllListeners();
+      }
+
+      contrato = new ethers.Contract(endereco, ABI, signer || new ethers.JsonRpcProvider("http://127.0.0.1:8545"));
+
+      // Ouvintes de Eventos
+      contrato.on("DocumentoRegistrado", (docId, docHash, emissor, expiraEm) => {
+        adicionarLogEvento("DocumentoRegistrado", `documentId: ${docId}\nemissor: ${emissor}\nexpiraEm: ${expiraEm == 0n ? 'sem expiração' : new Date(Number(expiraEm)*1000).toLocaleString()}`, 'green');
+      });
+      contrato.on("DocumentoRevogado", (docId, revogadoPor) => {
+        adicionarLogEvento("DocumentoRevogado", `documentId: ${docId}\nrevogadoPor: ${revogadoPor}`, 'danger');
+      });
+      contrato.on("DocumentoSubstituido", (antigo, novo, resp) => {
+        adicionarLogEvento("DocumentoSubstituido", `antigo: ${antigo}\nnovo: ${novo}\nresponsavel: ${resp}`, 'gold');
+      });
+
+      // Checagem de Papel
+      try {
+        const enderecoVara = await contrato.vara();
+        if (signer) {
+          const enderecoConectado = await signer.getAddress();
+          isVara = enderecoConectado.toLowerCase() === enderecoVara.toLowerCase();
+
+          const badgePapel = document.getElementById('badgePapel');
+          const infoPapel = document.getElementById('infoPapel');
+          const detalhesConta = document.getElementById('detalhesConta');
+
+          detalhesConta.style.display = 'block';
+          detalhesConta.innerHTML = `<strong>Conectado:</strong> ${enderecoConectado}<br><strong>Vara Oficial:</strong> ${enderecoVara}`;
+
+          if (isVara) {
+            badgePapel.className = 'gs-badge gs-badge-green';
+            badgePapel.innerHTML = '<span class="gs-badge-dot"></span> Vara da Infância (Autoridade Emissora)';
+            infoPapel.innerHTML = '✨ <strong>Autoridade Emissora Identificada.</strong> Você possui poderes para registrar, revogar e substituir alvarás.';
+          } else {
+            badgePapel.className = 'gs-badge gs-badge-blue';
+            badgePapel.innerHTML = '<span class="gs-badge-dot"></span> Agente Verificador Externo';
+            infoPapel.innerHTML = '🛡️ <strong>Modo Fiscalização / Verificador.</strong> Você pode consultar autenticidade e auditar integridade de arquivos.';
+          }
+
+          const secRegistrar = document.getElementById('secRegistrar');
+          const secSubstituir = document.getElementById('secSubstituir');
+          const secRevogar = document.getElementById('secRevogar');
+
+          [secRegistrar, secSubstituir, secRevogar].forEach(sec => {
+            if (sec) {
+              sec.style.opacity = isVara ? "1" : "0.55";
+              sec.querySelectorAll("input, button").forEach(el => {
+                el.disabled = !isVara;
+              });
+            }
+          });
+        }
+      } catch (err) {
+        showToast('Erro ao Ler Contrato', 'Verifique se o contrato está implantado no nó local.', 'error');
+      }
+    }
+
+    document.getElementById('btnCarregar').onclick = () => {
+      carregarContrato();
+      showToast('Contrato Carregado', 'Endereço e eventos sincronizados.', 'success');
+    };
+
+    // --- Log de Eventos ---
+    function adicionarLogEvento(tipo, detalhes, cor = 'blue') {
+      const container = document.getElementById('eventLogContainer');
+      if (container.children[0] && container.children[0].textContent.includes('Nenhum evento')) {
+        container.innerHTML = '';
+      }
+
+      const item = document.createElement('div');
+      item.className = 'gs-log-item';
+      item.innerHTML = `
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <span class="gs-badge gs-badge-${cor}"><span class="gs-badge-dot"></span> ${tipo}</span>
+          <span class="gs-mono" style="color:var(--gs-text-muted); font-size:0.75rem;">${new Date().toLocaleTimeString()}</span>
+        </div>
+        <div class="gs-mono" style="color:var(--gs-text-body); margin-top:0.35rem; line-height:1.6;">${detalhes.replace(/\n/g, '<br>')}</div>
+      `;
+      container.prepend(item);
+    }
+
+    document.getElementById('btnLimparLog').onclick = () => {
+      document.getElementById('eventLogContainer').innerHTML = '<div style="color: var(--gs-text-muted); font-size: 0.85rem; padding: 1.5rem; text-align: center;">Log limpo.</div>';
+    };
+
+    // --- Drag and Drop PDF ---
+    const regArquivoInput = document.getElementById('regArquivo');
+    const regDropzone = document.getElementById('regDropzone');
+    const regRotuloInput = document.getElementById('regRotulo');
+
+    regRotuloInput.addEventListener('input', () => {
+      const val = regRotuloInput.value.trim();
+      document.getElementById('regIdHash').textContent = val ? rotuloParaHash(val) : '-';
+    });
+
+    ['dragenter', 'dragover'].forEach(name => {
+      regDropzone.addEventListener(name, (e) => {
+        e.preventDefault();
+        regDropzone.classList.add('drag-over');
+      });
+    });
+
+    ['dragleave', 'drop'].forEach(name => {
+      regDropzone.addEventListener(name, (e) => {
+        e.preventDefault();
+        regDropzone.classList.remove('drag-over');
+      });
+    });
+
+    regDropzone.addEventListener('drop', (e) => {
+      const files = e.dataTransfer.files;
+      if (files.length) {
+        regArquivoInput.files = files;
+        atualizarPreviewArquivo(files[0]);
+      }
+    });
+
+    regArquivoInput.addEventListener('change', (e) => {
+      if (e.target.files.length) {
+        atualizarPreviewArquivo(e.target.files[0]);
+      }
+    });
+
+    async function atualizarPreviewArquivo(file) {
+      if (!file) return;
+      document.getElementById('regDropzoneText').textContent = file.name;
+      document.getElementById('regFileName').textContent = file.name;
+      document.getElementById('regFileSize').textContent = formatBytes(file.size);
+      document.getElementById('regArquivoInfo').style.display = 'flex';
+
+      const hash = await hashArquivo(file);
+      document.getElementById('regCalculatedHash').textContent = hash;
+      document.getElementById('regHashBox').style.display = 'block';
+    }
+
+    // --- Registrar Documento ---
+    document.getElementById('btnRegistrar').onclick = async () => {
+      if (!contrato) return showToast('Atenção', 'Carregue o contrato e conecte a carteira primeiro.', 'error');
+      if (!isVara) return showToast('Acesso Negado', 'Apenas a conta da Vara pode registrar documentos.', 'error');
+
+      const rotulo = document.getElementById('regRotulo').value.trim();
+      const arquivo = regArquivoInput.files[0];
+      const expiraStr = document.getElementById('regExpira').value;
+
+      if (!rotulo || !arquivo) {
+        return showToast('Dados Incompletos', 'Informe o identificador e selecione o arquivo PDF.', 'error');
+      }
+
+      const documentId = rotuloParaHash(rotulo);
+      const documentHash = await hashArquivo(arquivo);
+      const expiraEm = expiraStr ? Math.floor(new Date(expiraStr).getTime() / 1000) : 0;
+
+      try {
+        showToast('Submetendo Transação', 'Aguardando assinatura no MetaMask...', 'info');
+        const tx = await contrato.registrarDocumento(documentId, documentHash, expiraEm);
+        showToast('Transação Enviada', `Hash: ${tx.hash.slice(0, 10)}... Aguardando bloco...`, 'info');
+        const receipt = await tx.wait();
+        showToast('Sucesso!', `Alvará registrado no bloco ${receipt.blockNumber}!`, 'success');
+      } catch (err) {
+        showToast('Erro ao Registrar', decodificarErro(err, contrato), 'error');
+      }
+    };
+
+    // --- Consultar & Integridade ---
+    document.getElementById('btnConsultar').onclick = () => executarConsulta(false);
+    document.getElementById('btnRegistroCompleto').onclick = () => executarConsulta(true);
+
+    async function executarConsulta(completo) {
+      if (!contrato) return showToast('Atenção', 'Carregue o contrato primeiro.', 'error');
+      const rotulo = document.getElementById('consRotulo').value.trim();
+      if (!rotulo) return showToast('Campo Vazio', 'Informe o identificador do documento.', 'error');
+
+      const documentId = rotuloParaHash(rotulo);
+
+      try {
+        const resultadoBox = document.getElementById('resultadoConsultaBox');
+        const carimbo = document.getElementById('statusCarimbo');
+        const bannerIntegridade = document.getElementById('bannerIntegridade');
+        resultadoBox.style.display = 'block';
+
+        const r = await contrato.obterRegistro(documentId);
+        const statusNome = STATUS_NOMES[Number(r.status)];
+
+        // Carimbo de Status
+        carimbo.className = `gs-inspection-stamp gs-badge gs-badge-${statusNome === 'Valido' ? 'green' : statusNome === 'Expirado' ? 'gold' : 'danger'}`;
+        carimbo.innerHTML = statusNome === 'Valido' ? '✓ ALVARÁ VÁLIDO & VIGENTE' : `STATUS DO DOCUMENTO: ${statusNome.toUpperCase()}`;
+
+        // Metadados
+        document.getElementById('resDocId').textContent = documentId;
+        document.getElementById('resDocHash').textContent = r.documentHash;
+        document.getElementById('resEmissor').textContent = r.emissor;
+        document.getElementById('resEmitidoEm').textContent = new Date(Number(r.emitidoEm) * 1000).toLocaleString();
+        document.getElementById('resExpiraEm').textContent = r.expiraEm == 0n ? "Sem prazo de expiração (vigência contínua)" : new Date(Number(r.expiraEm) * 1000).toLocaleString();
+        document.getElementById('resSubstituidoPor').textContent = r.substituidoPor === ethers.ZeroHash ? "Nenhum (versão atual)" : r.substituidoPor;
+
+        document.getElementById('badgeStatusMini').className = `gs-badge gs-badge-${statusNome === 'Valido' ? 'green' : statusNome === 'Expirado' ? 'gold' : 'danger'}`;
+        document.getElementById('badgeStatusMini').textContent = statusNome;
+
+        // Prova de Integridade do PDF
+        const arquivo = document.getElementById('consArquivo').files[0];
+        if (arquivo) {
+          const hashCalculado = await hashArquivo(arquivo);
+          const confere = hashCalculado.toLowerCase() === r.documentHash.toLowerCase();
+          bannerIntegridade.style.display = 'flex';
+          if (confere) {
+            bannerIntegridade.className = 'gs-alert-banner success';
+            bannerIntegridade.innerHTML = `
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+              <div><strong>DOCUMENTO ÍNTEGRO:</strong> O arquivo PDF fornecido corresponde exatamente ao documento registrado pela Vara em blockchain.</div>
+            `;
+          } else {
+            bannerIntegridade.className = 'gs-alert-banner failure';
+            bannerIntegridade.innerHTML = `
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+              <div><strong>ALERTA DE ADULTERAÇÃO:</strong> O hash do arquivo PDF fornecido NÃO confere com o registro gravado on-chain. O documento foi modificado!</div>
+            `;
+          }
+        } else {
+          bannerIntegridade.style.display = 'none';
+        }
+
+        showToast('Consulta Realizada', `Status do documento: ${statusNome}`, 'success');
+
+      } catch (err) {
+        showToast('Erro na Consulta', decodificarErro(err, contrato), 'error');
+      }
+    }
+
+    // --- Revogar Documento ---
+    document.getElementById('btnRevogar').onclick = async () => {
+      if (!contrato) return showToast('Atenção', 'Carregue o contrato primeiro.', 'error');
+      if (!isVara) return showToast('Acesso Negado', 'Apenas a Vara pode revogar documentos.', 'error');
+
+      const rotulo = document.getElementById('revRotulo').value.trim();
+      if (!rotulo) return showToast('Campo Vazio', 'Informe o identificador do alvará a revogar.', 'error');
+
+      if (!confirm(`CONFIRMAÇÃO JUDICIAL:\n\nDeseja revogar definitivamente o documento "${rotulo}"?\nEsta ação é irreversível na blockchain.`)) {
+        return;
+      }
+
+      const documentId = rotuloParaHash(rotulo);
+
+      try {
+        showToast('Submetendo Revogação', 'Aguardando confirmação no MetaMask...', 'info');
+        const tx = await contrato.revogarDocumento(documentId);
+        const receipt = await tx.wait();
+        showToast('Revogado com Sucesso!', `Documento revogado no bloco ${receipt.blockNumber}.`, 'success');
+      } catch (err) {
+        showToast('Erro ao Revogar', decodificarErro(err, contrato), 'error');
+      }
+    };
+
+    // --- Substituir Documento ---
+    document.getElementById('btnSubstituir').onclick = async () => {
+      if (!contrato) return showToast('Atenção', 'Carregue o contrato primeiro.', 'error');
+      if (!isVara) return showToast('Acesso Negado', 'Apenas a Vara pode substituir documentos.', 'error');
+
+      const idAntigoStr = document.getElementById('subIdAntigo').value.trim();
+      const idNovoStr = document.getElementById('subIdNovo').value.trim();
+      const arquivoNovo = document.getElementById('subArquivo').files[0];
+      const expiraStr = document.getElementById('subExpira').value;
+
+      if (!idAntigoStr || !idNovoStr || !arquivoNovo) {
+        return showToast('Dados Incompletos', 'Informe o ID antigo, novo ID e carregue o novo PDF.', 'error');
+      }
+
+      const documentIdAntigo = rotuloParaHash(idAntigoStr);
+      const documentIdNovo = rotuloParaHash(idNovoStr);
+      const documentHashNovo = await hashArquivo(arquivoNovo);
+      const expiraEmNovo = expiraStr ? Math.floor(new Date(expiraStr).getTime() / 1000) : 0;
+
+      try {
+        showToast('Submetendo Substituição', 'Aguardando confirmação no MetaMask...', 'info');
+        const tx = await contrato.substituirDocumento(documentIdAntigo, documentIdNovo, documentHashNovo, expiraEmNovo);
+        const receipt = await tx.wait();
+        showToast('Substituído com Sucesso!', `Novo documento encadeado no bloco ${receipt.blockNumber}.`, 'success');
+      } catch (err) {
+        showToast('Erro ao Substituir', decodificarErro(err, contrato), 'error');
+      }
+    };
+
+    // --- Decodificador de Erros ---
+    function decodificarErro(err, contratoRef) {
+      const data = err?.data ?? err?.info?.error?.data;
+      if (data && contratoRef) {
+        try {
+          const decoded = contratoRef.interface.parseError(data);
+          return `${decoded.name}(${decoded.args.map(String).join(", ")})`;
+        } catch (_) {}
+      }
+      return err?.reason || err?.shortMessage || err?.message || String(err);
+    }
+
+    // Auto-carregar se MetaMask já estiver conectado
+    window.addEventListener('DOMContentLoaded', async () => {
+      if (window.ethereum) {
+        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+        if (accounts.length > 0) {
+          conectarCarteira();
+        }
+      }
+    });
+  </script>
 </body>
 </html>
