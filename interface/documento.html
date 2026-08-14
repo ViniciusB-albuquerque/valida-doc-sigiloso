@@ -12,8 +12,9 @@
     var SESSAO = null;
     try {
       const bruto = sessionStorage.getItem(CHAVE_SESSAO);
-      SESSAO = bruto ? JSON.parse(bruto) : null;
+      SESSAO = bruto ? normalizarPerfilSessao(JSON.parse(bruto)) : null;
       if (!SESSAO || typeof SESSAO !== "object") window.location.href = "login.html";
+      sessionStorage.setItem(CHAVE_SESSAO, JSON.stringify(SESSAO));
       if (SESSAO.perfil !== "vara") {
         const params = new URLSearchParams(window.location.search);
         window.location.href = "verificar.html" + (params.get("id") ? `?id=${encodeURIComponent(params.get("id"))}` : "");

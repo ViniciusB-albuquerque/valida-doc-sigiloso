@@ -13,8 +13,9 @@
     try {
       const bruto = sessionStorage.getItem(CHAVE_SESSAO);
       if (!bruto) throw new Error("sem sessao");
-      SESSAO = JSON.parse(bruto);
+      SESSAO = normalizarPerfilSessao(JSON.parse(bruto));
       if (!SESSAO || typeof SESSAO !== "object") throw new Error("sessao invalida");
+      sessionStorage.setItem(CHAVE_SESSAO, JSON.stringify(SESSAO));
     } catch (err) {
       window.location.href = "login.html";
     }
@@ -145,7 +146,7 @@
   </footer>
 
   <script>
-    document.getElementById("badgeSessao").textContent = `${SESSAO.nome} - ${SESSAO.perfil || "verificador"}`;
+    document.getElementById("badgeSessao").textContent = nomePerfil(SESSAO.perfil);
     if (SESSAO.perfil === "vara") {
       document.getElementById("tituloBusca").textContent = "Gerenciar e auditar documentos";
       document.getElementById("descricaoBusca").textContent =

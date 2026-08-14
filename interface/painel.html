@@ -5,14 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>VerificaJus Sigilo - Painel</title>
   <link rel="stylesheet" href="style.css" />
+  <script src="util.js"></script>
   <script>
     const CHAVE_SESSAO = "verificajus_sessao";
     var SESSAO = null;
     try {
       const bruto = sessionStorage.getItem(CHAVE_SESSAO);
       if (!bruto) throw new Error("sem sessao");
-      SESSAO = JSON.parse(bruto);
+      SESSAO = normalizarPerfilSessao(JSON.parse(bruto));
       if (!SESSAO || typeof SESSAO !== "object") throw new Error("sessao invalida");
+      sessionStorage.setItem(CHAVE_SESSAO, JSON.stringify(SESSAO));
     } catch (err) {
       window.location.href = "login.html";
     }
@@ -88,7 +90,7 @@
 
     document.getElementById("boasVindas").textContent = `Bem-vindo, ${SESSAO.nome}`;
     document.getElementById("labelUsuario").textContent = `${SESSAO.nome} - ${SESSAO.instituicao}`;
-    document.getElementById("badgePerfil").textContent = `Perfil: ${SESSAO.perfil || "verificador"}`;
+    document.getElementById("badgePerfil").textContent = nomePerfil(SESSAO.perfil);
 
     if (SESSAO.perfil === "vara") {
       document.getElementById("descricaoPainel").textContent =
