@@ -1,489 +1,452 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8" />
-<title>VerificaJus Sigilo - Validacao por QR</title>
-<script src="https://unpkg.com/ethers@6/dist/ethers.umd.min.js" type="application/javascript"></script>
-<script src="util.js"></script>
-<style>
-  :root { color-scheme: light; }
-  body {
-    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-    max-width: 760px;
-    margin: 2rem auto;
-    padding: 0 1rem;
-    color: #1c1c1c;
-    background: #fafafa;
-  }
-  h1 { font-size: 1.35rem; margin-bottom: 0; }
-  p.subtitulo { color: #555; font-size: 0.9rem; margin-top: 0.35rem; }
-  section {
-    background: white;
-    border: 1px solid #e2e2e2;
-    border-radius: 8px;
-    padding: 1rem 1.25rem;
-    margin-bottom: 1.25rem;
-  }
-  section h2 { font-size: 1rem; margin-top: 0; }
-  label { display: block; font-size: 0.85rem; margin: 0.6rem 0 0.2rem; color: #444; }
-  input {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 0.45rem 0.6rem;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    font-size: 0.9rem;
-  }
-  button {
-    margin-top: 0.8rem;
-    padding: 0.55rem 1.1rem;
-    border: none;
-    border-radius: 6px;
-    background: #1f2933;
-    color: white;
-    font-size: 0.85rem;
-    cursor: pointer;
-  }
-  button.secundario { background: #52606d; }
-  button:disabled { background: #b0b7bd; cursor: not-allowed; }
-  .resultado {
-    margin-top: 0.8rem;
-    padding: 0.7rem;
-    background: #f4f6f7;
-    border-radius: 6px;
-    font-size: 0.82rem;
-    white-space: pre-wrap;
-    word-break: break-word;
-  }
-  .status-grande {
-    font-size: 1.45rem;
-    font-weight: 750;
-    padding: 0.9rem;
-    border-radius: 8px;
-    text-align: center;
-    margin-top: 0.8rem;
-  }
-  .status-Valido { background: #d7f5df; color: #1a7a3d; }
-  .status-Expirado { background: #f5e9d7; color: #8a5b1a; }
-  .status-Revogado { background: #f7d9d9; color: #a12b2b; }
-  .status-Substituido { background: #dde3f7; color: #2b3ea1; }
-  .status-desconhecido { background: #eee; color: #555; }
-  .status-descricao { color: #444; font-size: 0.85rem; margin: 0.55rem 0 0; }
-  .aviso {
-    background: #fff4e5;
-    border: 1px solid #f0c36d;
-    padding: 0.7rem 1rem;
-    border-radius: 8px;
-    font-size: 0.82rem;
-    margin: 1rem 0 1.5rem;
-  }
-  .selo {
-    background: #eaf7ee;
-    border: 1px solid #a9dcb8;
-    color: #1a7a3d;
-  }
-  .scanner {
-    margin-top: 0.8rem;
-    display: none;
-  }
-  .scanner video {
-    width: 100%;
-    max-height: 360px;
-    background: #111;
-    border-radius: 8px;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VerificaJus Sigilo - Validacao por QR</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://unpkg.com/ethers@6/dist/ethers.umd.min.js" type="application/javascript"></script>
+  <script src="util.js"></script>
+  <style>
+    .qr-video { width: 100%; max-height: 360px; background: #111; border-radius: var(--gs-radius-lg); }
+    .mono-break { word-break: break-word; overflow-wrap: anywhere; }
+  </style>
 </head>
 <body>
+  <div class="gs-federal-stripe"></div>
 
-<h1>VerificaJus Sigilo - Validacao por QR</h1>
-<p class="subtitulo">O QR abre a validacao publica imediatamente. Dados sensiveis so aparecem apos carteira cadastrada e assinatura.</p>
+  <header class="gs-navbar">
+    <div class="gs-navbar-container">
+      <a href="painel.html" class="gs-brand">
+        <div class="gs-brand-icon" title="Poder Judiciario">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+            <path d="M2 17l10 5 10-5"></path>
+            <path d="M2 12l10 5 10-5"></path>
+          </svg>
+        </div>
+        <div class="gs-brand-info">
+          <h1>VerificaJus <span class="gs-tag-pill">Validacao</span></h1>
+          <p>QR Code &bull; Blockchain &bull; Acesso seletivo por perfil</p>
+        </div>
+      </a>
 
-<div class="aviso">
-  A resposta publica mostra apenas autenticidade e status do documento. A resposta detalhada e filtrada pelo perfil cadastrado da carteira.
-</div>
+      <div class="gs-navbar-actions">
+        <nav class="gs-nav-tabs">
+          <a href="painel.html" class="gs-nav-tab-item">Painel</a>
+          <a href="verificar.html" class="gs-nav-tab-item active">Validar</a>
+        </nav>
+      </div>
+    </div>
+  </header>
 
-<section>
-  <h2>Validacao rapida</h2>
-  <label for="inputBackend">URL do backend</label>
-  <input id="inputBackend" placeholder="http://localhost:3001" />
+  <main class="gs-main-container">
+    <section class="gs-hero">
+      <h2 class="gs-hero-title">Validacao rapida de documento judicial sigiloso</h2>
+      <p class="gs-hero-desc">
+        A consulta publica confirma autenticidade e status. Apos assinatura com carteira cadastrada, cada perfil recebe somente os dados autorizados para sua classe.
+      </p>
+      <div class="gs-hero-badges">
+        <span class="gs-badge gs-badge-green"><span class="gs-badge-dot"></span> QR dinamico</span>
+        <span class="gs-badge gs-badge-blue">Validacao seletiva</span>
+        <span class="gs-badge gs-badge-gold">Auditoria on-chain</span>
+      </div>
+    </section>
 
-  <label for="inputId">Identificador do documento</label>
-  <input id="inputId" placeholder="0x... ou rotulo interno" />
-  <button id="btnConsultarPublico">Validar agora</button>
-  <button id="btnLerQr" class="secundario">Ler QR pela camera</button>
-  <div id="scannerQr" class="scanner">
-    <video id="videoQr" playsinline muted></video>
-    <button id="btnPararQr" class="secundario">Parar camera</button>
-    <div id="resultadoQr" class="resultado" style="display:none;"></div>
-  </div>
-  <div id="statusGrande" class="status-grande" style="display:none;"></div>
-  <p id="statusDescricao" class="status-descricao" style="display:none;"></p>
-  <div id="resultadoPublico" class="resultado" style="display:none;"></div>
-  <button id="btnVerAtual" class="secundario" style="display:none;">Abrir versao atual</button>
-</section>
+    <div class="gs-card" style="margin-bottom:2rem;">
+      <div class="gs-card-header">
+        <div class="gs-card-header-main">
+          <div class="gs-card-icon icon-green">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          </div>
+          <div class="gs-card-title">
+            <h3>Consulta publica</h3>
+            <p>Sem carteira: mostra status e validade do documento</p>
+          </div>
+        </div>
+        <span class="gs-badge gs-badge-green">Nivel 1</span>
+      </div>
 
-<section>
-  <h2>Acesso por perfil</h2>
-  <button id="btnConectar">Conectar carteira</button>
-  <div id="contaAtual" class="resultado" style="display:none;"></div>
+      <div class="gs-card-body">
+        <div class="gs-grid-2col">
+          <div class="gs-form-control">
+            <label class="gs-form-label" for="inputBackend">
+              <span>URL do backend</span>
+              <span class="gs-form-hint">preenchido automaticamente</span>
+            </label>
+            <input id="inputBackend" class="gs-input gs-mono" placeholder="http://localhost:3001" />
+          </div>
+          <div class="gs-form-control">
+            <label class="gs-form-label" for="inputId">
+              <span>Identificador do documento</span>
+              <span class="gs-form-hint">documentId ou rotulo interno</span>
+            </label>
+            <input id="inputId" class="gs-input gs-mono" placeholder="0x... ou alvara-viagem-0001" />
+          </div>
+        </div>
 
-  <button id="btnVerDetalhes" class="secundario" style="display:none;">Autorizar e ver dados permitidos</button>
-  <div id="resultadoDetalhado" class="resultado" style="display:none;"></div>
-  <div id="seloNaoRepudio" class="resultado selo" style="display:none;"></div>
-</section>
+        <div style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-top:0.75rem;">
+          <button id="btnConsultarPublico" class="gs-btn gs-btn-primary">Validar agora</button>
+          <button id="btnLerQr" class="gs-btn gs-btn-secondary">Ler QR pela camera</button>
+          <button id="btnVerAtual" class="gs-btn gs-btn-secondary" style="display:none;">Abrir versao atual</button>
+        </div>
 
-<section>
-  <h2>Auditoria</h2>
-  <div id="historico" class="resultado">Valide um documento para ver o historico de acessos.</div>
-  <div id="cadeiaSubstituicoes" class="resultado" style="display:none;"></div>
-</section>
+        <div id="scannerQr" style="display:none; margin-top:1rem;">
+          <video id="videoQr" class="qr-video" playsinline muted></video>
+          <button id="btnPararQr" class="gs-btn gs-btn-secondary" style="margin-top:0.75rem;">Parar camera</button>
+          <div id="resultadoQr" class="gs-alert-banner" style="display:none; margin-top:1rem;"></div>
+        </div>
 
-<script>
-const CHAIN_ID_ESPERADO = 1337n;
-let providerCarteira, signer;
-let documentIdAtual = null;
-let scannerStream = null;
-let scannerAtivo = false;
+        <div id="statusGrande" class="gs-inspection-stamp" style="display:none; margin-top:1.25rem;"></div>
+        <div id="resultadoPublico" class="gs-alert-banner" style="display:none; margin-top:1rem;"></div>
+      </div>
+    </div>
 
-// Preenche o identificador a partir da URL, ex.: verificar?id=0x...
-// Este é o fluxo do QR Code: ele carrega somente o documentId. O backend,
-// já configurado com RPC e endereço do contrato, faz a consulta on-chain.
-const params = new URLSearchParams(window.location.search);
-document.getElementById("inputId").value = params.get("id") || "";
-document.getElementById("inputBackend").value = obterBackendPadrao();
+    <div class="gs-card" style="margin-bottom:2rem;">
+      <div class="gs-card-header">
+        <div class="gs-card-header-main">
+          <div class="gs-card-icon icon-gold">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+          </div>
+          <div class="gs-card-title">
+            <h3>Acesso autorizado por perfil</h3>
+            <p>Assinatura sem gas e retorno seletivo de informacoes</p>
+          </div>
+        </div>
+        <span class="gs-badge gs-badge-gold">Nivel 2</span>
+      </div>
 
-if (window.ethereum) {
-  window.ethereum.on("accountsChanged", () => window.location.reload());
-  window.ethereum.on("chainChanged", () => window.location.reload());
-}
+      <div class="gs-card-body">
+        <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+          <button id="btnConectar" class="gs-btn gs-btn-secondary">Conectar carteira</button>
+          <button id="btnVerDetalhes" class="gs-btn gs-btn-green" style="display:none;">Autorizar e ver dados permitidos</button>
+        </div>
+        <div id="contaAtual" class="gs-mono" style="display:none; font-size:0.82rem; color:var(--gs-text-muted); margin-top:0.75rem;"></div>
+        <div id="resultadoDetalhado" class="gs-alert-banner" style="display:none; margin-top:1rem;"></div>
+        <div id="seloNaoRepudio" class="gs-alert-banner success" style="display:none; margin-top:1rem;"></div>
+      </div>
+    </div>
 
-function backendUrl() {
-  return document.getElementById("inputBackend").value.trim().replace(/\/$/, "");
-}
+    <div class="gs-card">
+      <div class="gs-card-header">
+        <div class="gs-card-header-main">
+          <div class="gs-card-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"></path><path d="m19 9-5 5-4-4-3 3"></path></svg>
+          </div>
+          <div class="gs-card-title">
+            <h3>Auditoria</h3>
+            <p>Historico de acessos e cadeia de substituicoes</p>
+          </div>
+        </div>
+      </div>
+      <div class="gs-card-body">
+        <div id="historico" class="gs-log-container">
+          <div style="color:var(--gs-text-muted); font-size:0.85rem; padding:1.5rem; text-align:center;">Valide um documento para ver o historico de acessos.</div>
+        </div>
+        <div id="cadeiaSubstituicoes" class="gs-log-container" style="display:none; margin-top:1rem;"></div>
+      </div>
+    </div>
+  </main>
 
-function mostrar(id, texto) {
-  const el = document.getElementById(id);
-  el.style.display = "block";
-  el.textContent = texto;
-}
+  <footer class="gs-footer">
+    <div class="gs-footer-container">
+      <div><strong>VerificaJus Sigilo</strong> &bull; Portal de validacao seletiva</div>
+      <div>Poder Judiciario &bull; Republica Federativa do Brasil</div>
+    </div>
+  </footer>
 
-function extrairIdDoQr(textoQr) {
-  try {
-    const url = new URL(textoQr);
-    return url.searchParams.get("id") || textoQr;
-  } catch (_) {
-    return textoQr;
-  }
-}
+  <script>
+    const CHAIN_ID_ESPERADO = 1337n;
+    let providerCarteira, signer;
+    let documentIdAtual = null;
+    let scannerStream = null;
+    let scannerAtivo = false;
 
-function descricaoDoStatus(status) {
-  switch (status) {
-    case "Valido":
-      return "Documento veridico, emitido pela Vara e em vigor.";
-    case "Expirado":
-      return "Documento autentico, mas fora do prazo de validade.";
-    case "Revogado":
-      return "Documento autentico, mas cancelado pela Vara.";
-    case "Substituido":
-      return "Documento autentico, mas existe uma versao mais recente.";
-    default:
-      return "Status desconhecido.";
-  }
-}
+    const params = new URLSearchParams(window.location.search);
+    document.getElementById("inputId").value = params.get("id") || "";
+    document.getElementById("inputBackend").value = obterBackendPadrao();
 
-// Renderizacao generica dos campos liberados pelo backend. A pagina nao decide
-// quais dados sao sensiveis; ela apenas mostra o pacote ja filtrado pelo perfil.
-function formatarObjeto(obj) {
-  return Object.entries(obj || {})
-    .filter(([, valor]) => valor !== null && valor !== undefined && valor !== "")
-    .map(([chave, valor]) => `${chave}: ${valor}`)
-    .join("\n");
-}
-
-function formatarVisibilidade(dadosLiberados) {
-  if (!dadosLiberados) return "Nenhum dado adicional liberado.";
-
-  const campos = dadosLiberados.camposPermitidos?.length
-    ? dadosLiberados.camposPermitidos.join(", ")
-    : "nenhum campo sensivel";
-  const dados = formatarObjeto(dadosLiberados.dados);
-
-  return (
-    `Nivel de visibilidade: ${dadosLiberados.nivel}\n` +
-    `Regra: ${dadosLiberados.descricao}\n` +
-    `Campos permitidos: ${campos}\n\n` +
-    `Dados liberados para este perfil:\n${dados || "Nenhum dado adicional liberado."}`
-  );
-}
-
-// Task 4.3: historico COMPLETO da cadeia de substituicoes, reconstruido pelo
-// backend/indexador. Importante quando o QR aponta para um documento antigo:
-// a tela consegue orientar o verificador ate a versao vigente.
-function renderizarCadeiaSubstituicoes(cadeia) {
-  const el = document.getElementById("cadeiaSubstituicoes");
-  if (!cadeia || cadeia.length === 0) {
-    el.style.display = "none";
-    el.textContent = "";
-    return;
-  }
-
-  el.style.display = "block";
-  el.textContent = "Cadeia de substituicoes:\n" + cadeia
-    .map((salto) => {
-      const quando = new Date(salto.quando).toLocaleString();
-      const quem = salto.responsavelNome
-        ? `${salto.responsavelNome} (${salto.responsavelInstituicao})`
-        : salto.responsavel;
-      return `${quando} - ${salto.documentIdAntigo} -> ${salto.documentIdNovo} por ${quem}`;
-    })
-    .join("\n");
-}
-
-// Historico publico de acessos detalhados. O evento on-chain e publico por
-// natureza; o backend apenas enriquece com nome/instituicao cadastrados.
-async function carregarHistorico(documentId, mostrarCadeia = false) {
-  const el = document.getElementById("historico");
-  try {
-    const resp = await fetch(`${backendUrl()}/api/documentos/${documentId}/historico`);
-    const dados = await resp.json();
-    if (!resp.ok) throw new Error(dados.erro || "Erro ao carregar historico.");
-
-    if (mostrarCadeia) renderizarCadeiaSubstituicoes(dados.cadeiaSubstituicoes);
-
-    if (dados.historico.length === 0) {
-      el.textContent = "Nenhum acesso detalhado registrado para este documento.";
-      return;
+    if (window.ethereum) {
+      window.ethereum.on("accountsChanged", () => window.location.reload());
+      window.ethereum.on("chainChanged", () => window.location.reload());
     }
 
-    el.textContent = dados.historico
-      .map((h) => {
-        const quando = new Date(h.quando).toLocaleString();
-        const quem = h.nome ? `${h.nome} (${h.instituicao})` : h.endereco;
-        return `${quando} - acesso detalhado por ${quem}`;
-      })
-      .join("\n");
-  } catch (err) {
-    el.textContent = "Nao foi possivel carregar o historico: " + (err?.message || String(err));
-    if (mostrarCadeia) renderizarCadeiaSubstituicoes([]);
-  }
-}
+    function backendUrl() {
+      return document.getElementById("inputBackend").value.trim().replace(/\/$/, "");
+    }
 
-// Task 3.3: funcao nomeada para poder ser chamada tanto pelo clique manual
-// quanto automaticamente quando a URL veio do QR (?id=...). A validacao rapida
-// nao exige carteira: ela responde so autenticidade/status.
-async function consultarPublico(idBruto) {
-  if (!idBruto) return alert("Preencha o identificador do documento.");
-  documentIdAtual = resolverIdentificadorDocumento(idBruto);
-  document.getElementById("btnVerAtual").style.display = "none";
-  document.getElementById("resultadoDetalhado").style.display = "none";
-  document.getElementById("seloNaoRepudio").style.display = "none";
+    function mostrar(id, texto, classe = "") {
+      const el = document.getElementById(id);
+      el.style.display = "flex";
+      el.className = classe || el.className;
+      el.textContent = texto;
+    }
 
-  try {
-    const resp = await fetch(`${backendUrl()}/api/documentos/${documentIdAtual}/status`);
-    const dados = await resp.json();
-    if (!resp.ok) throw new Error(dados.erro || "Documento nao encontrado.");
-
-    const status = dados.status;
-    const badge = document.getElementById("statusGrande");
-    badge.style.display = "block";
-    badge.className = "status-grande status-" + status;
-    badge.textContent = status === "Valido" ? "AUTORIZADO - DOCUMENTO VALIDO" : status.toUpperCase();
-
-    const desc = document.getElementById("statusDescricao");
-    desc.style.display = "block";
-    desc.textContent = descricaoDoStatus(status);
-
-    mostrar("resultadoPublico", `documentId: ${documentIdAtual}\nstatus: ${status}\nconsulta: blockchain via backend`);
-    document.getElementById("btnVerDetalhes").style.display = "inline-block";
-    if (status === "Substituido") document.getElementById("btnVerAtual").style.display = "inline-block";
-    await carregarHistorico(documentIdAtual);
-  } catch (err) {
-    document.getElementById("statusGrande").style.display = "none";
-    document.getElementById("statusDescricao").style.display = "none";
-    renderizarCadeiaSubstituicoes([]);
-    mostrar("resultadoPublico", "Erro: " + (err?.message || String(err)));
-  }
-}
-
-document.getElementById("btnConsultarPublico").onclick = () => {
-  consultarPublico(document.getElementById("inputId").value.trim());
-};
-
-async function pararScannerQr() {
-  scannerAtivo = false;
-  if (scannerStream) {
-    scannerStream.getTracks().forEach((track) => track.stop());
-    scannerStream = null;
-  }
-  document.getElementById("scannerQr").style.display = "none";
-}
-
-// Leitura de QR Code no navegador. Usa a camera via getUserMedia e a API
-// BarcodeDetector, quando disponivel. Funciona em localhost ou HTTPS; em origem
-// insegura o navegador bloqueia a camera por protecao do usuario.
-document.getElementById("btnLerQr").onclick = async () => {
-  const resultadoQr = document.getElementById("resultadoQr");
-
-  if (!navigator.mediaDevices?.getUserMedia) {
-    mostrar("resultadoQr", "Este navegador nao permite acesso a camera nesta pagina.");
-    document.getElementById("scannerQr").style.display = "block";
-    return;
-  }
-
-  if (!("BarcodeDetector" in window)) {
-    mostrar("resultadoQr", "Este navegador nao suporta leitura nativa de QR Code. Use Chrome/Edge atual ou cole o codigo manualmente.");
-    document.getElementById("scannerQr").style.display = "block";
-    return;
-  }
-
-  try {
-    await pararScannerQr();
-    document.getElementById("scannerQr").style.display = "block";
-    resultadoQr.style.display = "none";
-
-    const detector = new BarcodeDetector({ formats: ["qr_code"] });
-    const video = document.getElementById("videoQr");
-    scannerStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: "environment" } },
-      audio: false,
-    });
-    video.srcObject = scannerStream;
-    await video.play();
-
-    scannerAtivo = true;
-    const detectar = async () => {
-      if (!scannerAtivo) return;
+    function extrairIdDoQr(textoQr) {
       try {
-        const codigos = await detector.detect(video);
-        if (codigos.length > 0) {
-          const valor = codigos[0].rawValue;
-          const id = extrairIdDoQr(valor);
-          document.getElementById("inputId").value = id;
-          mostrar("resultadoQr", `QR lido: ${valor}\nIdentificador usado: ${id}`);
-          await pararScannerQr();
-          await consultarPublico(id);
+        const url = new URL(textoQr);
+        return url.searchParams.get("id") || textoQr;
+      } catch (_) {
+        return textoQr;
+      }
+    }
+
+    function descricaoDoStatus(status) {
+      switch (status) {
+        case "Valido": return "Documento veridico, emitido pela Vara e em vigor.";
+        case "Expirado": return "Documento autentico, mas fora do prazo de validade.";
+        case "Revogado": return "Documento autentico, mas cancelado pela Vara.";
+        case "Substituido": return "Documento autentico, mas existe uma versao mais recente.";
+        default: return "Status desconhecido.";
+      }
+    }
+
+    function formatarObjeto(obj) {
+      return Object.entries(obj || {})
+        .filter(([, valor]) => valor !== null && valor !== undefined && valor !== "")
+        .map(([chave, valor]) => `${chave}: ${valor}`)
+        .join("\n");
+    }
+
+    function formatarVisibilidade(dadosLiberados) {
+      if (!dadosLiberados) return "Nenhum dado adicional liberado.";
+      const campos = dadosLiberados.camposPermitidos?.length ? dadosLiberados.camposPermitidos.join(", ") : "nenhum campo sensivel";
+      const dados = formatarObjeto(dadosLiberados.dados);
+      return (
+        `Nivel de visibilidade: ${dadosLiberados.nivel}\n` +
+        `Regra: ${dadosLiberados.descricao}\n` +
+        `Campos permitidos: ${campos}\n\n` +
+        `Dados liberados para este perfil:\n${dados || "Nenhum dado adicional liberado."}`
+      );
+    }
+
+    function renderizarCadeiaSubstituicoes(cadeia) {
+      const el = document.getElementById("cadeiaSubstituicoes");
+      if (!cadeia || cadeia.length === 0) {
+        el.style.display = "none";
+        el.textContent = "";
+        return;
+      }
+
+      el.style.display = "block";
+      el.textContent = "Cadeia de substituicoes:\n" + cadeia
+        .map((salto) => {
+          const quando = new Date(salto.quando).toLocaleString();
+          const quem = salto.responsavelNome ? `${salto.responsavelNome} (${salto.responsavelInstituicao})` : salto.responsavel;
+          return `${quando} - ${salto.documentIdAntigo} -> ${salto.documentIdNovo} por ${quem}`;
+        })
+        .join("\n");
+    }
+
+    async function carregarHistorico(documentId, mostrarCadeia = false) {
+      const el = document.getElementById("historico");
+      try {
+        const resp = await fetch(`${backendUrl()}/api/documentos/${documentId}/historico`);
+        const dados = await resp.json();
+        if (!resp.ok) throw new Error(dados.erro || "Erro ao carregar historico.");
+
+        if (mostrarCadeia) renderizarCadeiaSubstituicoes(dados.cadeiaSubstituicoes);
+
+        if (dados.historico.length === 0) {
+          el.textContent = "Nenhum acesso detalhado registrado para este documento.";
           return;
         }
+
+        el.textContent = dados.historico
+          .map((h) => {
+            const quando = new Date(h.quando).toLocaleString();
+            const quem = h.nome ? `${h.nome} (${h.instituicao})` : h.endereco;
+            return `${quando} - acesso detalhado por ${quem}`;
+          })
+          .join("\n");
       } catch (err) {
-        mostrar("resultadoQr", "Nao foi possivel ler o QR: " + (err?.message || String(err)));
+        el.textContent = "Nao foi possivel carregar o historico: " + (err?.message || String(err));
+        if (mostrarCadeia) renderizarCadeiaSubstituicoes([]);
       }
-      requestAnimationFrame(detectar);
+    }
+
+    async function consultarPublico(idBruto) {
+      if (!idBruto) return alert("Preencha o identificador do documento.");
+      documentIdAtual = resolverIdentificadorDocumento(idBruto);
+      document.getElementById("btnVerAtual").style.display = "none";
+      document.getElementById("resultadoDetalhado").style.display = "none";
+      document.getElementById("seloNaoRepudio").style.display = "none";
+
+      try {
+        const resp = await fetch(`${backendUrl()}/api/documentos/${documentIdAtual}/status`);
+        const dados = await resp.json();
+        if (!resp.ok) throw new Error(dados.erro || "Documento nao encontrado.");
+
+        const status = dados.status;
+        const badge = document.getElementById("statusGrande");
+        badge.style.display = "flex";
+        badge.className = `gs-inspection-stamp gs-badge gs-badge-${status === "Valido" ? "green" : status === "Expirado" ? "gold" : "danger"}`;
+        badge.textContent = status === "Valido" ? "AUTORIZADO - DOCUMENTO VALIDO" : status.toUpperCase();
+
+        mostrar(
+          "resultadoPublico",
+          `${descricaoDoStatus(status)}\n\ndocumentId: ${documentIdAtual}\nstatus: ${status}\nconsulta: blockchain via backend`,
+          "gs-alert-banner success mono-break"
+        );
+
+        document.getElementById("btnVerDetalhes").style.display = "inline-flex";
+        if (status === "Substituido") document.getElementById("btnVerAtual").style.display = "inline-flex";
+        await carregarHistorico(documentIdAtual);
+      } catch (err) {
+        document.getElementById("statusGrande").style.display = "none";
+        renderizarCadeiaSubstituicoes([]);
+        mostrar("resultadoPublico", "Erro: " + (err?.message || String(err)), "gs-alert-banner failure mono-break");
+      }
+    }
+
+    document.getElementById("btnConsultarPublico").onclick = () => {
+      consultarPublico(document.getElementById("inputId").value.trim());
     };
-    requestAnimationFrame(detectar);
-  } catch (err) {
-    mostrar("resultadoQr", "Falha ao abrir a camera: " + (err?.message || String(err)));
-    await pararScannerQr();
-    document.getElementById("scannerQr").style.display = "block";
-  }
-};
 
-document.getElementById("btnPararQr").onclick = pararScannerQr;
-
-// Task 3.4: se o documento foi substituido, pula para o fim da cadeia de
-// substituicoes usando a rota publica do backend. A blockchain continua sendo a
-// fonte do status; o backend so evita expor RPC/contrato diretamente no QR.
-document.getElementById("btnVerAtual").onclick = async () => {
-  try {
-    const resp = await fetch(`${backendUrl()}/api/documentos/${documentIdAtual}/atual`);
-    const dados = await resp.json();
-    if (!resp.ok) throw new Error(dados.erro || "Nao foi possivel resolver a versao atual.");
-    document.getElementById("inputId").value = dados.documentIdAtual;
-    await consultarPublico(dados.documentIdAtual);
-  } catch (err) {
-    mostrar("resultadoPublico", "Erro ao resolver versao atual: " + (err?.message || String(err)));
-  }
-};
-
-// Conexao da carteira usada somente para o Nivel 2. A assinatura e feita via
-// personal_sign (sem gas, sem transacao do usuario) e enviada ao backend.
-document.getElementById("btnConectar").onclick = async () => {
-  if (!window.ethereum) return alert("MetaMask nao encontrado.");
-
-  providerCarteira = new ethers.BrowserProvider(window.ethereum);
-  await providerCarteira.send("eth_requestAccounts", []);
-
-  const rede = await providerCarteira.getNetwork();
-  if (rede.chainId !== CHAIN_ID_ESPERADO) {
-    alert(`Rede incorreta (chainId ${rede.chainId}). Use a rede local Hardhat, chainId 1337.`);
-    return;
-  }
-
-  signer = await providerCarteira.getSigner();
-  mostrar("contaAtual", `Conectado: ${await signer.getAddress()}`);
-};
-
-// Fluxo do Nivel 2:
-//   1) pede um desafio ao backend;
-//   2) assina a mensagem no MetaMask, sem gas;
-//   3) envia a assinatura ao backend;
-//   4) o backend verifica identidade/perfil, registra o acesso on-chain e
-//      devolve somente os dados autorizados para aquele perfil.
-document.getElementById("btnVerDetalhes").onclick = async () => {
-  if (!signer) return alert("Conecte sua carteira primeiro.");
-  if (!documentIdAtual) return alert("Valide um documento primeiro.");
-
-  const endereco = await signer.getAddress();
-  document.getElementById("seloNaoRepudio").style.display = "none";
-  mostrar("resultadoDetalhado", "Pedindo desafio ao backend...");
-
-  try {
-    const respDesafio = await fetch(`${backendUrl()}/api/documentos/${documentIdAtual}/desafio?endereco=${endereco}`);
-    const dadosDesafio = await respDesafio.json();
-    if (!respDesafio.ok) {
-      mostrar("resultadoDetalhado", `Acesso negado: ${dadosDesafio.erro}`);
-      return;
+    async function pararScannerQr() {
+      scannerAtivo = false;
+      if (scannerStream) {
+        scannerStream.getTracks().forEach((track) => track.stop());
+        scannerStream = null;
+      }
+      document.getElementById("scannerQr").style.display = "none";
     }
 
-    mostrar("resultadoDetalhado", "Aguardando assinatura no MetaMask...");
-    const assinatura = await signer.signMessage(dadosDesafio.mensagem);
+    document.getElementById("btnLerQr").onclick = async () => {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        mostrar("resultadoQr", "Este navegador nao permite acesso a camera nesta pagina.", "gs-alert-banner failure");
+        document.getElementById("scannerQr").style.display = "block";
+        return;
+      }
+      if (!("BarcodeDetector" in window)) {
+        mostrar("resultadoQr", "Este navegador nao suporta leitura nativa de QR Code. Use Chrome/Edge atual ou cole o codigo manualmente.", "gs-alert-banner failure");
+        document.getElementById("scannerQr").style.display = "block";
+        return;
+      }
 
-    mostrar("resultadoDetalhado", "Validando perfil e registrando acesso...");
-    const respAcesso = await fetch(`${backendUrl()}/api/documentos/${documentIdAtual}/acesso`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ endereco, assinatura }),
-    });
-    const dadosAcesso = await respAcesso.json();
-    if (!respAcesso.ok) {
-      mostrar("resultadoDetalhado", `Erro: ${dadosAcesso.erro}`);
-      return;
+      try {
+        await pararScannerQr();
+        document.getElementById("scannerQr").style.display = "block";
+        document.getElementById("resultadoQr").style.display = "none";
+
+        const detector = new BarcodeDetector({ formats: ["qr_code"] });
+        const video = document.getElementById("videoQr");
+        scannerStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false });
+        video.srcObject = scannerStream;
+        await video.play();
+
+        scannerAtivo = true;
+        const detectar = async () => {
+          if (!scannerAtivo) return;
+          const codigos = await detector.detect(video);
+          if (codigos.length > 0) {
+            const valor = codigos[0].rawValue;
+            const id = extrairIdDoQr(valor);
+            document.getElementById("inputId").value = id;
+            mostrar("resultadoQr", `QR lido: ${valor}\nIdentificador usado: ${id}`, "gs-alert-banner success mono-break");
+            await pararScannerQr();
+            await consultarPublico(id);
+            return;
+          }
+          requestAnimationFrame(detectar);
+        };
+        requestAnimationFrame(detectar);
+      } catch (err) {
+        mostrar("resultadoQr", "Falha ao abrir a camera: " + (err?.message || String(err)), "gs-alert-banner failure");
+        await pararScannerQr();
+        document.getElementById("scannerQr").style.display = "block";
+      }
+    };
+
+    document.getElementById("btnPararQr").onclick = pararScannerQr;
+
+    document.getElementById("btnVerAtual").onclick = async () => {
+      try {
+        const resp = await fetch(`${backendUrl()}/api/documentos/${documentIdAtual}/atual`);
+        const dados = await resp.json();
+        if (!resp.ok) throw new Error(dados.erro || "Nao foi possivel resolver a versao atual.");
+        document.getElementById("inputId").value = dados.documentIdAtual;
+        await consultarPublico(dados.documentIdAtual);
+      } catch (err) {
+        mostrar("resultadoPublico", "Erro ao resolver versao atual: " + (err?.message || String(err)), "gs-alert-banner failure mono-break");
+      }
+    };
+
+    document.getElementById("btnConectar").onclick = async () => {
+      if (!window.ethereum) return alert("MetaMask nao encontrado.");
+
+      providerCarteira = new ethers.BrowserProvider(window.ethereum);
+      await providerCarteira.send("eth_requestAccounts", []);
+
+      const rede = await providerCarteira.getNetwork();
+      if (rede.chainId !== CHAIN_ID_ESPERADO) {
+        alert(`Rede incorreta (chainId ${rede.chainId}). Use a rede local Hardhat, chainId 1337.`);
+        return;
+      }
+
+      signer = await providerCarteira.getSigner();
+      const conta = await signer.getAddress();
+      const el = document.getElementById("contaAtual");
+      el.style.display = "block";
+      el.textContent = `Conectado: ${conta}`;
+    };
+
+    document.getElementById("btnVerDetalhes").onclick = async () => {
+      if (!signer) return alert("Conecte sua carteira primeiro.");
+      if (!documentIdAtual) return alert("Valide um documento primeiro.");
+
+      const endereco = await signer.getAddress();
+      document.getElementById("seloNaoRepudio").style.display = "none";
+      mostrar("resultadoDetalhado", "Pedindo desafio ao backend...", "gs-alert-banner mono-break");
+
+      try {
+        const respDesafio = await fetch(`${backendUrl()}/api/documentos/${documentIdAtual}/desafio?endereco=${endereco}`);
+        const dadosDesafio = await respDesafio.json();
+        if (!respDesafio.ok) return mostrar("resultadoDetalhado", `Acesso negado: ${dadosDesafio.erro}`, "gs-alert-banner failure mono-break");
+
+        mostrar("resultadoDetalhado", "Aguardando assinatura no MetaMask...", "gs-alert-banner mono-break");
+        const assinatura = await signer.signMessage(dadosDesafio.mensagem);
+
+        mostrar("resultadoDetalhado", "Validando perfil e registrando acesso...", "gs-alert-banner mono-break");
+        const respAcesso = await fetch(`${backendUrl()}/api/documentos/${documentIdAtual}/acesso`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ endereco, assinatura }),
+        });
+        const dadosAcesso = await respAcesso.json();
+        if (!respAcesso.ok) return mostrar("resultadoDetalhado", `Erro: ${dadosAcesso.erro}`, "gs-alert-banner failure mono-break");
+
+        const r = dadosAcesso.registro;
+        const v = dadosAcesso.verificador;
+        const visibilidade = formatarVisibilidade(dadosAcesso.dadosLiberados);
+        mostrar(
+          "resultadoDetalhado",
+          `Autorizado para: ${v.nome} (${v.instituicao})\n` +
+          `perfil: ${v.perfil}\n\n` +
+          `Status blockchain:\n` +
+          `documentHash: ${r.documentHash}\n` +
+          `emissor: ${r.emissor}` + (r.emissorNome ? ` (${r.emissorNome} - ${r.emissorInstituicao})` : "") + `\n` +
+          `emitidoEm: ${new Date(r.emitidoEm * 1000).toLocaleString()}\n` +
+          `expiraEm: ${r.expiraEm === 0 ? "sem expiracao" : new Date(r.expiraEm * 1000).toLocaleString()}\n` +
+          `status: ${r.status}\n\n` +
+          visibilidade,
+          "gs-alert-banner success mono-break"
+        );
+
+        mostrar(
+          "seloNaoRepudio",
+          `Acesso registrado de forma nao-repudiavel.\ntx: ${dadosAcesso.acessoRegistrado.txHash}\nbloco: ${dadosAcesso.acessoRegistrado.blockNumber}`,
+          "gs-alert-banner success mono-break"
+        );
+        await carregarHistorico(documentIdAtual, true);
+      } catch (err) {
+        mostrar("resultadoDetalhado", "Erro: " + (err?.message || String(err)), "gs-alert-banner failure mono-break");
+      }
+    };
+
+    if (params.get("id")) {
+      consultarPublico(params.get("id"));
     }
-
-    const r = dadosAcesso.registro;
-    const v = dadosAcesso.verificador;
-    const visibilidade = formatarVisibilidade(dadosAcesso.dadosLiberados);
-
-    mostrar(
-      "resultadoDetalhado",
-      `Autorizado para: ${v.nome} (${v.instituicao})\n` +
-      `perfil: ${v.perfil}\n\n` +
-      `Status blockchain:\n` +
-      `documentHash: ${r.documentHash}\n` +
-      `emissor: ${r.emissor}` + (r.emissorNome ? ` (${r.emissorNome} - ${r.emissorInstituicao})` : "") + `\n` +
-      `emitidoEm: ${new Date(r.emitidoEm * 1000).toLocaleString()}\n` +
-      `expiraEm: ${r.expiraEm === 0 ? "sem expiracao" : new Date(r.expiraEm * 1000).toLocaleString()}\n` +
-      `status: ${r.status}\n\n` +
-      visibilidade
-    );
-
-    mostrar(
-      "seloNaoRepudio",
-      `Acesso registrado de forma nao-repudiavel.\n` +
-      `tx: ${dadosAcesso.acessoRegistrado.txHash}\n` +
-      `bloco: ${dadosAcesso.acessoRegistrado.blockNumber}`
-    );
-
-    await carregarHistorico(documentIdAtual, true);
-  } catch (err) {
-    mostrar("resultadoDetalhado", "Erro: " + (err?.message || String(err)));
-  }
-};
-
-// Se a pessoa chegou via QR/link direto, a validacao publica carrega sozinha.
-if (params.get("id")) {
-  consultarPublico(params.get("id"));
-}
-</script>
+  </script>
 </body>
 </html>
