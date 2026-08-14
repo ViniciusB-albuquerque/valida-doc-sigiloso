@@ -1,128 +1,145 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8" />
-<title>VerificaJus Sigilo — Painel</title>
-<script>
-// Guarda de sessão — roda ANTES de o <body> renderizar. Se não houver uma
-// sessão válida em sessionStorage, redireciona na hora para o login, de
-// modo que a página nunca chega a aparecer vazia para quem não entrou.
-const CHAVE_SESSAO = "verificajus_sessao";
-var SESSAO = null;
-try {
-  const bruto = sessionStorage.getItem(CHAVE_SESSAO);
-  if (!bruto) throw new Error("sem sessão");
-  SESSAO = JSON.parse(bruto); // lança se não for JSON válido
-  if (!SESSAO || typeof SESSAO !== "object") throw new Error("sessão inválida");
-} catch (err) {
-  window.location.href = "login";
-}
-</script>
-<style>
-  :root { color-scheme: light; }
-  body {
-    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-    max-width: 720px;
-    margin: 2rem auto;
-    padding: 0 1rem;
-    color: #1c1c1c;
-    background: #fafafa;
-  }
-  h1 { font-size: 1.3rem; margin-bottom: 0; }
-  p.subtitulo { color: #555; font-size: 0.9rem; margin-top: 0.3rem; }
-  section {
-    background: white;
-    border: 1px solid #e2e2e2;
-    border-radius: 10px;
-    padding: 1rem 1.25rem;
-    margin-bottom: 1.25rem;
-  }
-  section h2 { font-size: 1rem; margin-top: 0; }
-  label { display: block; font-size: 0.85rem; margin: 0.6rem 0 0.2rem; color: #444; }
-  .cards { display: flex; gap: 1rem; flex-wrap: wrap; }
-  .card {
-    flex: 1 1 260px;
-    border: 1px solid #e2e2e2;
-    border-radius: 8px;
-    padding: 0.9rem 1rem;
-    background: #fafcff;
-  }
-  .card h3 { font-size: 0.95rem; margin: 0 0 0.3rem; }
-  .card p { font-size: 0.82rem; color: #555; margin: 0 0 0.6rem; }
-  a.botao, button {
-    display: inline-block;
-    margin-top: 0.8rem;
-    padding: 0.55rem 1.1rem;
-    border: none;
-    border-radius: 6px;
-    background: #1f2933;
-    color: white;
-    font-size: 0.85rem;
-    cursor: pointer;
-    text-decoration: none;
-  }
-  button.secundario, a.botao.secundario { background: #52606d; }
-  button:disabled,
-  a.botao.desabilitado {
-    background: #b0b7bd;
-    cursor: not-allowed;
-    pointer-events: none;
-  }
-  .resultado {
-    margin-top: 0.8rem;
-    padding: 0.7rem;
-    background: #f4f6f7;
-    border-radius: 6px;
-    font-size: 0.82rem;
-    white-space: pre-wrap;
-    word-break: break-all;
-  }
-  .aviso {
-    background: #fff4e5;
-    border: 1px solid #f0c36d;
-    padding: 0.7rem 1rem;
-    border-radius: 8px;
-    font-size: 0.82rem;
-    margin: 1rem 0 1.5rem;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VerificaJus Sigilo — Painel Judicial</title>
+  <link rel="stylesheet" href="style.css" />
+  <script>
+    const CHAVE_SESSAO = "verificajus_sessao";
+    var SESSAO = null;
+    try {
+      const bruto = sessionStorage.getItem(CHAVE_SESSAO);
+      if (!bruto) throw new Error("sem sessão");
+      SESSAO = JSON.parse(bruto);
+      if (!SESSAO || typeof SESSAO !== "object") throw new Error("sessão inválida");
+    } catch (err) {
+      window.location.href = "login.html";
+    }
+  </script>
 </head>
 <body>
+  <!-- Faixa Institucional Federal -->
+  <div class="gs-federal-stripe"></div>
 
-<h1>VerificaJus Sigilo — Painel</h1>
-<p class="subtitulo" id="boasVindas"></p>
+  <!-- Header -->
+  <header class="gs-navbar">
+    <div class="gs-navbar-container">
+      <a href="painel.html" class="gs-brand">
+        <div class="gs-brand-icon" title="Poder Judiciário — República Federativa do Brasil">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+            <path d="M2 17l10 5 10-5"></path>
+            <path d="M2 12l10 5 10-5"></path>
+          </svg>
+        </div>
+        <div class="gs-brand-info">
+          <h1>
+            VerificaJus
+            <span class="gs-tag-pill">Painel Operacional</span>
+          </h1>
+          <p>Poder Judiciário &bull; Vara da Infância e da Juventude</p>
+        </div>
+      </a>
 
-<section>
-  <h2>O que você quer fazer?</h2>
-  <div class="cards">
-    <div class="card">
-      <h3>Registrar documento</h3>
-      <p>Registrar ou revogar documentos na Vara, falando direto com o contrato pelo MetaMask.</p>
-      <a class="botao" href="registrar">Registrar documento</a>
+      <div class="gs-navbar-actions">
+        <div style="display:flex; align-items:center; gap:0.75rem;">
+          <span class="gs-badge gs-badge-green"><span class="gs-badge-dot"></span> <span id="labelUsuario">Operador Conectado</span></span>
+          <button id="btnSair" class="gs-btn gs-btn-secondary gs-btn-sm">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+            Sair
+          </button>
+        </div>
+      </div>
     </div>
-    <div class="card">
-      <h3>Encontrar documento</h3>
-      <p>Buscar documentos por identificador, por arquivo (hash) ou por status/data.</p>
-      <a class="botao" href="buscar">Encontrar documento</a>
+  </header>
+
+  <!-- Container Principal -->
+  <main class="gs-main-container">
+
+    <!-- Hero -->
+    <section class="gs-hero">
+      <h2 class="gs-hero-title" id="boasVindas">Bem-vindo ao Painel Judicial</h2>
+      <p class="gs-hero-desc">
+        Selecione o módulo de trabalho desejado. Todos os registros de alvarás e termos são ancorados de forma descentralizada na rede blockchain com garantia de sigilo de menores.
+      </p>
+    </section>
+
+    <!-- Grid de Ações -->
+    <div class="gs-grid-2col">
+      <!-- Card Registrar / Gerenciar -->
+      <div class="gs-card">
+        <div class="gs-card-header">
+          <div class="gs-card-header-main">
+            <div class="gs-card-icon icon-green">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+            </div>
+            <div class="gs-card-title">
+              <h3>Cartório & Gestão de Alvarás</h3>
+              <p>Módulo da Vara da Infância</p>
+            </div>
+          </div>
+          <span class="gs-badge gs-badge-green">Emissão On-Chain</span>
+        </div>
+
+        <div class="gs-card-body">
+          <p style="font-size: 0.92rem; color: var(--gs-text-muted); line-height: 1.6;">
+            Registrar novos alvarás com prazo de validade, efetuar substituições encadeadas ou revogar autorizações judiciais.
+          </p>
+          <a href="index.html" class="gs-btn gs-btn-primary" style="margin-top: 0.5rem; width: 100%;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+            Abrir Painel de Gestão da Vara
+          </a>
+        </div>
+      </div>
+
+      <!-- Card Validação Pública & Não-Repúdio -->
+      <div class="gs-card">
+        <div class="gs-card-header">
+          <div class="gs-card-header-main">
+            <div class="gs-card-icon icon-gold">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            </div>
+            <div class="gs-card-title">
+              <h3>Validação Pública & Auditoria</h3>
+              <p>Módulo de Fiscalização</p>
+            </div>
+          </div>
+          <span class="gs-badge gs-badge-gold">Não-Repúdio</span>
+        </div>
+
+        <div class="gs-card-body">
+          <p style="font-size: 0.92rem; color: var(--gs-text-muted); line-height: 1.6;">
+            Consultar autenticidade sem carteira (Nível 1) ou registrar auditoria com carimbo de não-repúdio on-chain para fiscais (Nível 2).
+          </p>
+          <a href="verificar.html" class="gs-btn gs-btn-secondary" style="margin-top: 0.5rem; width: 100%;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            Abrir Portal de Validação Pública
+          </a>
+        </div>
+      </div>
     </div>
-  </div>
-</section>
 
-<section>
-  <h2>Sessão</h2>
-  <button id="btnSair" class="secundario">Sair</button>
-</section>
+  </main>
 
-<script>
-// Neste ponto SESSAO já foi validada pela guarda no <head> (senão a página
-// já teria redirecionado). Só preenche o nome/instituição na tela.
-document.getElementById("boasVindas").textContent =
-  `Bem-vindo, ${SESSAO.nome} — ${SESSAO.instituicao}`;
+  <!-- Rodapé -->
+  <footer class="gs-footer">
+    <div class="gs-footer-container">
+      <div><strong>VerificaJus Sigilo</strong> &bull; Sistema Judicial Descentralizado</div>
+      <div>Poder Judiciário &bull; República Federativa do Brasil</div>
+    </div>
+  </footer>
 
-document.getElementById("btnSair").onclick = () => {
-  sessionStorage.removeItem(CHAVE_SESSAO);
-  window.location.href = "login";
-};
-</script>
+  <script>
+    if (SESSAO) {
+      document.getElementById("boasVindas").textContent = `Bem-vindo, ${SESSAO.nome} (${SESSAO.instituicao})`;
+      document.getElementById("labelUsuario").textContent = `${SESSAO.nome} — ${SESSAO.instituicao}`;
+    }
+
+    document.getElementById("btnSair").onclick = () => {
+      sessionStorage.removeItem(CHAVE_SESSAO);
+      window.location.href = "login.html";
+    };
+  </script>
 </body>
 </html>
