@@ -136,7 +136,13 @@
 
         sessionStorage.setItem(
           CHAVE_SESSAO,
-          JSON.stringify({ token: dados.token, nome: dados.nome, instituicao: dados.instituicao, perfil: dados.perfil })
+          JSON.stringify(normalizarPerfilSessao({
+            token: dados.token,
+            email,
+            nome: dados.nome,
+            instituicao: dados.instituicao,
+            perfil: dados.perfil,
+          }))
         );
         window.location.href = "painel.html";
       } catch (err) {

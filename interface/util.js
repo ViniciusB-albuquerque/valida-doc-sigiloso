@@ -31,3 +31,32 @@ async function carregarConfigBackend() {
   if (!resp.ok) throw new Error(dados.erro || "Nao foi possivel carregar configuracao do backend.");
   return dados;
 }
+
+function perfilPeloEmail(email) {
+  const mapa = {
+    "juiz.exemplo@tjpb.jus.br": "vara",
+    "pf.exemplo@dpf.gov.br": "policia_federal",
+    "aerea.exemplo@companhia.demo": "companhia_aerea",
+    "conselho.exemplo@ct.demo": "conselho_tutelar",
+  };
+  return mapa[String(email || "").toLowerCase()] || "";
+}
+
+function normalizarPerfilSessao(sessao) {
+  if (!sessao || typeof sessao !== "object") return sessao;
+  const perfilDetectado = perfilPeloEmail(sessao.email);
+  const perfilAtual = sessao.perfil || "";
+  const perfil = !perfilAtual || perfilAtual === "verificador" ? (perfilDetectado || perfilAtual || "verificador") : perfilAtual;
+  return { ...sessao, perfil };
+}
+
+function nomePerfil(perfil) {
+  const nomes = {
+    vara: "Vara",
+    policia_federal: "Polícia Federal",
+    companhia_aerea: "Companhia Aérea",
+    conselho_tutelar: "Conselho Tutelar",
+    verificador: "Verificador",
+  };
+  return nomes[perfil] || perfil || "Verificador";
+}
