@@ -24,3 +24,4 @@ npx serve interface
 # ciclo doc completo
 npx hardhat run scripts/demo.js --network localhost
 ```
+<img width="1600" height="1040" alt="image" src="https://github.com/user-attachments/assets/f2aef1da-660c-46a8-ab5a-3fa6e1963362" />
