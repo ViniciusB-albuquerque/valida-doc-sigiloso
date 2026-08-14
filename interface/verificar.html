@@ -2,30 +2,29 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8" />
-<title>VerificaJus Sigilo — Verificação pública</title>
+<title>VerificaJus Sigilo - Validacao por QR</title>
 <script src="https://unpkg.com/ethers@6/dist/ethers.umd.min.js" type="application/javascript"></script>
 <script src="util.js"></script>
 <style>
   :root { color-scheme: light; }
   body {
     font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-    max-width: 720px;
+    max-width: 760px;
     margin: 2rem auto;
     padding: 0 1rem;
     color: #1c1c1c;
     background: #fafafa;
   }
-  h1 { font-size: 1.3rem; margin-bottom: 0; }
-  p.subtitulo { color: #555; font-size: 0.9rem; margin-top: 0.3rem; }
+  h1 { font-size: 1.35rem; margin-bottom: 0; }
+  p.subtitulo { color: #555; font-size: 0.9rem; margin-top: 0.35rem; }
   section {
     background: white;
     border: 1px solid #e2e2e2;
-    border-radius: 10px;
+    border-radius: 8px;
     padding: 1rem 1.25rem;
     margin-bottom: 1.25rem;
   }
   section h2 { font-size: 1rem; margin-top: 0; }
-  section.nivel2 { background: #fafcff; }
   label { display: block; font-size: 0.85rem; margin: 0.6rem 0 0.2rem; color: #444; }
   input {
     width: 100%;
@@ -54,11 +53,11 @@
     border-radius: 6px;
     font-size: 0.82rem;
     white-space: pre-wrap;
-    word-break: break-all;
+    word-break: break-word;
   }
   .status-grande {
-    font-size: 1.4rem;
-    font-weight: 700;
+    font-size: 1.45rem;
+    font-weight: 750;
     padding: 0.9rem;
     border-radius: 8px;
     text-align: center;
@@ -69,13 +68,7 @@
   .status-Revogado { background: #f7d9d9; color: #a12b2b; }
   .status-Substituido { background: #dde3f7; color: #2b3ea1; }
   .status-desconhecido { background: #eee; color: #555; }
-  .status-descricao {
-    color: #444;
-    font-size: 0.85rem;
-    margin: 0.55rem 0 0;
-  }
-  #historico,
-  #cadeiaSubstituicoes { max-height: 200px; overflow-y: auto; font-size: 0.8rem; }
+  .status-descricao { color: #444; font-size: 0.85rem; margin: 0.55rem 0 0; }
   .aviso {
     background: #fff4e5;
     border: 1px solid #f0c36d;
@@ -84,112 +77,72 @@
     font-size: 0.82rem;
     margin: 1rem 0 1.5rem;
   }
-  .selo-nao-repudio {
+  .selo {
     background: #eaf7ee;
     border: 1px solid #a9dcb8;
-    padding: 0.6rem 0.8rem;
-    border-radius: 6px;
-    font-size: 0.78rem;
     color: #1a7a3d;
-    margin-top: 0.6rem;
   }
 </style>
 </head>
 <body>
 
-<h1>VerificaJus Sigilo — Verificação pública</h1>
-<p class="subtitulo">Nível 1 é aberto a qualquer pessoa, sem carteira. Nível 2 exige carteira
-cadastrada e assinatura — o próprio acesso já fica registrado, de forma não-repudiável, como
-parte do fluxo (não é um botão à parte).</p>
+<h1>VerificaJus Sigilo - Validacao por QR</h1>
+<p class="subtitulo">O QR abre a validacao publica imediatamente. Dados sensiveis so aparecem apos carteira cadastrada e assinatura.</p>
 
 <div class="aviso">
-  Ferramenta de <strong>desenvolvimento/teste</strong>. O QR/link só precisa carregar o
-  identificador do documento — RPC e endereço do contrato já vêm fixos no código desta
-  página (não são mais aceitos por parâmetro de URL, ver docs/05-fluxo-e-plano.md § 3.8).
+  A resposta publica mostra apenas autenticidade e status do documento. A resposta detalhada e filtrada pelo perfil cadastrado da carteira.
 </div>
 
 <section>
-  <h2>Configuração</h2>
+  <h2>Validacao rapida</h2>
   <label for="inputBackend">URL do backend</label>
   <input id="inputBackend" placeholder="http://localhost:3001" />
-</section>
 
-<section>
-  <h2>Nível 1 — Consulta pública (sem carteira)</h2>
-  <label for="inputId">Identificador do documento (cole o hash, ou digite o rótulo interno usado no registro)</label>
-  <input id="inputId" placeholder="0x... ou alvara-viagem-0001" />
-  <button id="btnConsultarPublico">Consultar</button>
+  <label for="inputId">Identificador do documento</label>
+  <input id="inputId" placeholder="0x... ou rotulo interno" />
+  <button id="btnConsultarPublico">Validar agora</button>
   <div id="statusGrande" class="status-grande" style="display:none;"></div>
   <p id="statusDescricao" class="status-descricao" style="display:none;"></p>
   <div id="resultadoPublico" class="resultado" style="display:none;"></div>
-  <button id="btnVerAtual" class="secundario" style="display:none;">Ver documento atual</button>
-
-  <label style="margin-top:1rem;">Histórico de verificações (quem já confirmou ter visto os detalhes)</label>
-  <div id="historico" class="resultado">Consulte um documento acima para ver o histórico.</div>
+  <button id="btnVerAtual" class="secundario" style="display:none;">Abrir versao atual</button>
 </section>
 
-<section class="nivel2">
-  <h2>Nível 2 — Mais detalhes (com carteira cadastrada)</h2>
+<section>
+  <h2>Acesso por perfil</h2>
   <button id="btnConectar">Conectar carteira</button>
   <div id="contaAtual" class="resultado" style="display:none;"></div>
 
-  <button id="btnVerDetalhes" class="secundario" style="display:none;">Ver mais informações</button>
+  <button id="btnVerDetalhes" class="secundario" style="display:none;">Autorizar e ver dados permitidos</button>
   <div id="resultadoDetalhado" class="resultado" style="display:none;"></div>
-  <div id="blocoCadeiaSubstituicoes" style="display:none;">
-    <label style="margin-top:1rem;">Cadeia de substituições</label>
-    <div id="cadeiaSubstituicoes" class="resultado"></div>
-  </div>
-  <div id="seloNaoRepudio" class="selo-nao-repudio" style="display:none;"></div>
+  <div id="seloNaoRepudio" class="resultado selo" style="display:none;"></div>
+</section>
+
+<section>
+  <h2>Auditoria</h2>
+  <div id="historico" class="resultado">Valide um documento para ver o historico de acessos.</div>
+  <div id="cadeiaSubstituicoes" class="resultado" style="display:none;"></div>
 </section>
 
 <script>
-// ABI mínima só para o Nível 1 (leitura pública, sem carteira). O Nível 2
-// não fala mais com o contrato diretamente — passa pelo backend (ver
-// btnVerDetalhes abaixo), que é quem tem autorização (backendAutorizado)
-// para chamar registrarAcesso.
-const ABI = [
-  "function consultarStatus(bytes32 documentId) view returns (uint8)",
-  "function resolverDocumentoAtual(bytes32 documentId) view returns (bytes32 documentIdAtual)",
-  "event AcessoRegistrado(bytes32 indexed documentId, address indexed verificador, bytes32 assinaturaHash, uint64 quando)",
-];
-
-// TASK 3.1 (Etapa 3) — RPC e endereço do contrato viram CONSTANTES FIXAS no
-// código da página, em vez de aceitos via parâmetro de URL (?rpc=...&address=...).
-//
-// Motivo: um QR/link forjado poderia apontar essa mesma página pra um RPC ou
-// contrato falsos, fabricando "documento válido" pra qualquer coisa, de forma
-// visualmente indistinguível da página real (ver docs/05-fluxo-e-plano.md § 3.8).
-// A correção original só previa travar o ENDEREÇO do contrato — estendi para
-// travar também o RPC, porque é exatamente a mesma classe de vulnerabilidade:
-// um RPC forjado consegue fabricar QUALQUER resposta (status, histórico),
-// mesmo que o endereço do contrato esteja correto.
-//
-// TROQUE ESTES DOIS VALORES a cada novo deploy (é o único lugar do arquivo
-// que precisa mudar):
-const RPC_URL = "http://127.0.0.1:8545"; // TODO: ajuste para a rede de publicação (ex.: Besu)
-const CONTRATO_ENDERECO = "0x0000000000000000000000000000000000000000"; // TODO: endereço real do deploy
-
-const STATUS_NOMES = ["Valido", "Expirado", "Revogado", "Substituido"];
 const CHAIN_ID_ESPERADO = 1337n;
-
-let providerLeitura, providerCarteira, signer, contratoLeitura;
+let providerCarteira, signer;
 let documentIdAtual = null;
 
 // Preenche o identificador a partir da URL, ex.: verificar?id=0x...
-// (é exatamente esse padrão de link que o QR gerado em index usa —
-// ver Task 3.2). RPC/endereço não são mais lidos daqui (Task 3.1).
+// Este é o fluxo do QR Code: ele carrega somente o documentId. O backend,
+// já configurado com RPC e endereço do contrato, faz a consulta on-chain.
 const params = new URLSearchParams(window.location.search);
 document.getElementById("inputId").value = params.get("id") || "";
 document.getElementById("inputBackend").value = params.get("backend") || "http://localhost:3001";
-
-providerLeitura = new ethers.JsonRpcProvider(RPC_URL);
-contratoLeitura = new ethers.Contract(CONTRATO_ENDERECO, ABI, providerLeitura);
 
 if (window.ethereum) {
   window.ethereum.on("accountsChanged", () => window.location.reload());
   window.ethereum.on("chainChanged", () => window.location.reload());
 }
 
+function backendUrl() {
+  return document.getElementById("inputBackend").value.trim().replace(/\/$/, "");
+}
 
 function mostrar(id, texto) {
   const el = document.getElementById(id);
@@ -197,126 +150,116 @@ function mostrar(id, texto) {
   el.textContent = texto;
 }
 
-function decodificarErro(err, contratoRef) {
-  const data = err?.data ?? err?.info?.error?.data;
-  if (data && contratoRef) {
-    try {
-      const decoded = contratoRef.interface.parseError(data);
-      return `${decoded.name}(${decoded.args.map(String).join(", ")})`;
-    } catch (_) {}
-  }
-  return err?.reason || err?.shortMessage || err?.message || String(err);
-}
-
 function descricaoDoStatus(status) {
   switch (status) {
     case "Valido":
-      return "Documento válido e em vigor.";
+      return "Documento veridico, emitido pela Vara e em vigor.";
     case "Expirado":
-      return "Este documento passou do prazo de validade.";
+      return "Documento autentico, mas fora do prazo de validade.";
     case "Revogado":
-      return "Este documento foi cancelado pela Vara e não possui substituto.";
+      return "Documento autentico, mas cancelado pela Vara.";
     case "Substituido":
-      return "Este documento não é mais a versão vigente — existe uma versão mais recente e válida.";
+      return "Documento autentico, mas existe uma versao mais recente.";
     default:
-      return "";
+      return "Status desconhecido.";
   }
 }
 
-function renderizarCadeiaSubstituicoes(cadeia) {
-  const bloco = document.getElementById("blocoCadeiaSubstituicoes");
-  const el = document.getElementById("cadeiaSubstituicoes");
+// Renderizacao generica dos campos liberados pelo backend. A pagina nao decide
+// quais dados sao sensiveis; ela apenas mostra o pacote ja filtrado pelo perfil.
+function formatarObjeto(obj) {
+  return Object.entries(obj || {})
+    .filter(([, valor]) => valor !== null && valor !== undefined && valor !== "")
+    .map(([chave, valor]) => `${chave}: ${valor}`)
+    .join("\n");
+}
 
+// Task 4.3: historico COMPLETO da cadeia de substituicoes, reconstruido pelo
+// backend/indexador. Importante quando o QR aponta para um documento antigo:
+// a tela consegue orientar o verificador ate a versao vigente.
+function renderizarCadeiaSubstituicoes(cadeia) {
+  const el = document.getElementById("cadeiaSubstituicoes");
   if (!cadeia || cadeia.length === 0) {
-    bloco.style.display = "none";
+    el.style.display = "none";
     el.textContent = "";
     return;
   }
 
-  el.textContent = cadeia
+  el.style.display = "block";
+  el.textContent = "Cadeia de substituicoes:\n" + cadeia
     .map((salto) => {
       const quando = new Date(salto.quando).toLocaleString();
       const quem = salto.responsavelNome
         ? `${salto.responsavelNome} (${salto.responsavelInstituicao})`
         : salto.responsavel;
-      return `documento ${salto.documentIdAntigo} foi substituído por ${salto.documentIdNovo}, em ${quando}, por ${quem}`;
+      return `${quando} - ${salto.documentIdAntigo} -> ${salto.documentIdNovo} por ${quem}`;
     })
     .join("\n");
-  bloco.style.display = "block";
 }
 
-async function carregarHistorico(backendUrl, documentId, mostrarCadeiaSubstituicoes = false) {
+// Historico publico de acessos detalhados. O evento on-chain e publico por
+// natureza; o backend apenas enriquece com nome/instituicao cadastrados.
+async function carregarHistorico(documentId, mostrarCadeia = false) {
   const el = document.getElementById("historico");
   try {
-    const resp = await fetch(`${backendUrl}/api/documentos/${documentId}/historico`);
+    const resp = await fetch(`${backendUrl()}/api/documentos/${documentId}/historico`);
     const dados = await resp.json();
-    if (!resp.ok) throw new Error(dados.erro || "Erro ao carregar histórico.");
+    if (!resp.ok) throw new Error(dados.erro || "Erro ao carregar historico.");
 
-    if (mostrarCadeiaSubstituicoes) {
-      renderizarCadeiaSubstituicoes(dados.cadeiaSubstituicoes);
-    }
+    if (mostrarCadeia) renderizarCadeiaSubstituicoes(dados.cadeiaSubstituicoes);
 
     if (dados.historico.length === 0) {
-      el.textContent = "Nenhuma verificação confirmada ainda para este documento.";
+      el.textContent = "Nenhum acesso detalhado registrado para este documento.";
       return;
     }
+
     el.textContent = dados.historico
       .map((h) => {
         const quando = new Date(h.quando).toLocaleString();
         const quem = h.nome ? `${h.nome} (${h.instituicao})` : h.endereco;
-        return `${quando} — verificado por ${quem}`;
+        return `${quando} - acesso detalhado por ${quem}`;
       })
       .join("\n");
   } catch (err) {
-    el.textContent = "Não foi possível carregar o histórico: " + err.message;
-    if (mostrarCadeiaSubstituicoes) renderizarCadeiaSubstituicoes([]);
+    el.textContent = "Nao foi possivel carregar o historico: " + (err?.message || String(err));
+    if (mostrarCadeia) renderizarCadeiaSubstituicoes([]);
   }
 }
 
-// Task 3.3: extraída como função nomeada (em vez de só um onclick anônimo)
-// para poder ser chamada tanto pelo clique manual quanto automaticamente,
-// se a URL já vier com ?id=... (fluxo do QR — ver mais abaixo).
+// Task 3.3: funcao nomeada para poder ser chamada tanto pelo clique manual
+// quanto automaticamente quando a URL veio do QR (?id=...). A validacao rapida
+// nao exige carteira: ela responde so autenticidade/status.
 async function consultarPublico(idBruto) {
-  const backendUrl = document.getElementById("inputBackend").value.trim().replace(/\/$/, "");
   if (!idBruto) return alert("Preencha o identificador do documento.");
-
   documentIdAtual = resolverIdentificadorDocumento(idBruto);
   document.getElementById("btnVerAtual").style.display = "none";
+  document.getElementById("resultadoDetalhado").style.display = "none";
+  document.getElementById("seloNaoRepudio").style.display = "none";
 
   try {
-    const status = await contratoLeitura.consultarStatus(documentIdAtual);
-    const nome = STATUS_NOMES[Number(status)] || "desconhecido";
+    const resp = await fetch(`${backendUrl()}/api/documentos/${documentIdAtual}/status`);
+    const dados = await resp.json();
+    if (!resp.ok) throw new Error(dados.erro || "Documento nao encontrado.");
 
+    const status = dados.status;
     const badge = document.getElementById("statusGrande");
     badge.style.display = "block";
-    badge.className = "status-grande status-" + nome;
-    badge.textContent = nome === "Valido" ? "✓ VÁLIDO" : nome.toUpperCase();
+    badge.className = "status-grande status-" + status;
+    badge.textContent = status === "Valido" ? "AUTORIZADO - DOCUMENTO VALIDO" : status.toUpperCase();
 
-    const statusDescricao = document.getElementById("statusDescricao");
-    const descricao = descricaoDoStatus(nome);
-    statusDescricao.style.display = descricao ? "block" : "none";
-    statusDescricao.textContent = descricao;
+    const desc = document.getElementById("statusDescricao");
+    desc.style.display = "block";
+    desc.textContent = descricaoDoStatus(status);
 
-    mostrar("resultadoPublico", `documentId: ${documentIdAtual}\nstatus: ${nome}`);
-    renderizarCadeiaSubstituicoes([]);
-
-    // Task 3.4: se foi substituído, oferece o caminho pra versão vigente —
-    // sem isso, a verificação vira um beco sem saída pra quem só tem o QR
-    // do documento antigo impresso no papel.
-    if (nome === "Substituido") {
-      document.getElementById("btnVerAtual").style.display = "inline-block";
-    }
-
-    await carregarHistorico(backendUrl, documentIdAtual);
-
-    // Já que temos um documento carregado, libera o botão do Nível 2
-    // (mas ele só faz algo de fato depois de conectar a carteira).
+    mostrar("resultadoPublico", `documentId: ${documentIdAtual}\nstatus: ${status}\nconsulta: blockchain via backend`);
     document.getElementById("btnVerDetalhes").style.display = "inline-block";
+    if (status === "Substituido") document.getElementById("btnVerAtual").style.display = "inline-block";
+    await carregarHistorico(documentIdAtual);
   } catch (err) {
     document.getElementById("statusGrande").style.display = "none";
     document.getElementById("statusDescricao").style.display = "none";
     renderizarCadeiaSubstituicoes([]);
-    mostrar("resultadoPublico", "Erro: " + decodificarErro(err, contratoLeitura));
+    mostrar("resultadoPublico", "Erro: " + (err?.message || String(err)));
   }
 }
 
@@ -324,28 +267,32 @@ document.getElementById("btnConsultarPublico").onclick = () => {
   consultarPublico(document.getElementById("inputId").value.trim());
 };
 
-// Task 3.4: pula direto pro fim da cadeia de substituições (mesmo que seja
-// A -> B -> C), sem custo de gas (view) — reaproveita a mesma tela, só troca
-// qual documentId está sendo mostrado.
+// Task 3.4: se o documento foi substituido, pula para o fim da cadeia de
+// substituicoes usando a rota publica do backend. A blockchain continua sendo a
+// fonte do status; o backend so evita expor RPC/contrato diretamente no QR.
 document.getElementById("btnVerAtual").onclick = async () => {
   try {
-    const idAtualResolvido = await contratoLeitura.resolverDocumentoAtual(documentIdAtual);
-    document.getElementById("inputId").value = idAtualResolvido;
-    await consultarPublico(idAtualResolvido);
+    const resp = await fetch(`${backendUrl()}/api/documentos/${documentIdAtual}/atual`);
+    const dados = await resp.json();
+    if (!resp.ok) throw new Error(dados.erro || "Nao foi possivel resolver a versao atual.");
+    document.getElementById("inputId").value = dados.documentIdAtual;
+    await consultarPublico(dados.documentIdAtual);
   } catch (err) {
-    mostrar("resultadoPublico", "Erro ao resolver documento atual: " + decodificarErro(err, contratoLeitura));
+    mostrar("resultadoPublico", "Erro ao resolver versao atual: " + (err?.message || String(err)));
   }
 };
 
+// Conexao da carteira usada somente para o Nivel 2. A assinatura e feita via
+// personal_sign (sem gas, sem transacao do usuario) e enviada ao backend.
 document.getElementById("btnConectar").onclick = async () => {
-  if (!window.ethereum) return alert("MetaMask não encontrado.");
+  if (!window.ethereum) return alert("MetaMask nao encontrado.");
 
   providerCarteira = new ethers.BrowserProvider(window.ethereum);
   await providerCarteira.send("eth_requestAccounts", []);
 
   const rede = await providerCarteira.getNetwork();
   if (rede.chainId !== CHAIN_ID_ESPERADO) {
-    alert(`Rede incorreta (chainId ${rede.chainId}). Troque para a rede com chainId 1337 no MetaMask.`);
+    alert(`Rede incorreta (chainId ${rede.chainId}). Use a rede local Hardhat, chainId 1337.`);
     return;
   }
 
@@ -353,46 +300,33 @@ document.getElementById("btnConectar").onclick = async () => {
   mostrar("contaAtual", `Conectado: ${await signer.getAddress()}`);
 };
 
-// Fluxo do Nível 2, reforçado (Etapa 1 + Task 2.6):
-//   1) pede um desafio ao backend (mensagem com timestamp, gerada pelo servidor)
-//   2) assina essa mensagem com personal_sign (signer.signMessage — sem gas,
-//      sem transação, é só uma assinatura)
-//   3) envia a assinatura ao backend, que confere e SÓ ENTÃO chama
-//      registrarAcesso on-chain, usando a própria chave do backend
-//      (nunca a do visitante)
-// Não existe mais um botão separado de "carimbar" — o próprio ato de ver
-// os detalhes já é o que fica registrado, automaticamente, como parte
-// deste fluxo único.
+// Fluxo do Nivel 2:
+//   1) pede um desafio ao backend;
+//   2) assina a mensagem no MetaMask, sem gas;
+//   3) envia a assinatura ao backend;
+//   4) o backend verifica identidade/perfil, registra o acesso on-chain e
+//      devolve somente os dados autorizados para aquele perfil.
 document.getElementById("btnVerDetalhes").onclick = async () => {
   if (!signer) return alert("Conecte sua carteira primeiro.");
-  if (!documentIdAtual) return alert("Consulte um documento no Nível 1 primeiro.");
+  if (!documentIdAtual) return alert("Valide um documento primeiro.");
 
-  const backendUrl = document.getElementById("inputBackend").value.trim().replace(/\/$/, "");
   const endereco = await signer.getAddress();
-
   document.getElementById("seloNaoRepudio").style.display = "none";
   mostrar("resultadoDetalhado", "Pedindo desafio ao backend...");
 
   try {
-    // Passo 1 — desafio
-    const respDesafio = await fetch(
-      `${backendUrl}/api/documentos/${documentIdAtual}/desafio?endereco=${endereco}`
-    );
+    const respDesafio = await fetch(`${backendUrl()}/api/documentos/${documentIdAtual}/desafio?endereco=${endereco}`);
     const dadosDesafio = await respDesafio.json();
     if (!respDesafio.ok) {
       mostrar("resultadoDetalhado", `Acesso negado: ${dadosDesafio.erro}`);
       return;
     }
 
-    // Passo 2 — assina a mensagem exata que o backend gerou (o MetaMask
-    // abre o popup de "assinar mensagem" aqui — sem custo, sem transação).
-    mostrar("resultadoDetalhado", "Aguardando sua assinatura no MetaMask...");
+    mostrar("resultadoDetalhado", "Aguardando assinatura no MetaMask...");
     const assinatura = await signer.signMessage(dadosDesafio.mensagem);
 
-    // Passo 3 — envia a assinatura; o backend confere e registra o acesso
-    // on-chain automaticamente, como parte desta mesma chamada.
-    mostrar("resultadoDetalhado", "Confirmando acesso...");
-    const respAcesso = await fetch(`${backendUrl}/api/documentos/${documentIdAtual}/acesso`, {
+    mostrar("resultadoDetalhado", "Validando perfil e registrando acesso...");
+    const respAcesso = await fetch(`${backendUrl()}/api/documentos/${documentIdAtual}/acesso`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ endereco, assinatura }),
@@ -404,34 +338,36 @@ document.getElementById("btnVerDetalhes").onclick = async () => {
     }
 
     const r = dadosAcesso.registro;
+    const v = dadosAcesso.verificador;
+    const dadosLiberados = formatarObjeto(dadosAcesso.dadosLiberados);
+
     mostrar(
       "resultadoDetalhado",
+      `Autorizado para: ${v.nome} (${v.instituicao})\n` +
+      `perfil: ${v.perfil}\n\n` +
+      `Status blockchain:\n` +
       `documentHash: ${r.documentHash}\n` +
-      `emissor: ${r.emissor}` + (r.emissorNome ? ` (${r.emissorNome} — ${r.emissorInstituicao})` : "") + `\n` +
+      `emissor: ${r.emissor}` + (r.emissorNome ? ` (${r.emissorNome} - ${r.emissorInstituicao})` : "") + `\n` +
       `emitidoEm: ${new Date(r.emitidoEm * 1000).toLocaleString()}\n` +
-      `expiraEm: ${r.expiraEm === 0 ? "sem expiração" : new Date(r.expiraEm * 1000).toLocaleString()}\n` +
-      `status: ${r.status}\n` +
-      `substituidoPor: ${r.substituidoPor || "-"}`
+      `expiraEm: ${r.expiraEm === 0 ? "sem expiracao" : new Date(r.expiraEm * 1000).toLocaleString()}\n` +
+      `status: ${r.status}\n\n` +
+      `Dados liberados para este perfil:\n${dadosLiberados || "Nenhum dado adicional liberado."}`
     );
 
-    const el = document.getElementById("seloNaoRepudio");
-    el.style.display = "block";
-    el.textContent =
-      `✓ Seu acesso foi registrado de forma não-repudiável.\n` +
+    mostrar(
+      "seloNaoRepudio",
+      `Acesso registrado de forma nao-repudiavel.\n` +
       `tx: ${dadosAcesso.acessoRegistrado.txHash}\n` +
-      `bloco: ${dadosAcesso.acessoRegistrado.blockNumber}`;
+      `bloco: ${dadosAcesso.acessoRegistrado.blockNumber}`
+    );
 
-    // Atualiza o histórico público (Nível 1) com este novo acesso.
-    await carregarHistorico(backendUrl, documentIdAtual, true);
+    await carregarHistorico(documentIdAtual, true);
   } catch (err) {
     mostrar("resultadoDetalhado", "Erro: " + (err?.message || String(err)));
   }
 };
 
-// Task 3.3: se a URL já veio com ?id=..., é porque a pessoa chegou aqui via
-// QR ou link direto — o Nível 1 carrega SOZINHO, sem exigir clicar em
-// "Consultar" primeiro. Isso não muda nada pra quem abre a página em branco
-// (sem ?id=, o campo fica vazio e nada é chamado automaticamente).
+// Se a pessoa chegou via QR/link direto, a validacao publica carrega sozinha.
 if (params.get("id")) {
   consultarPublico(params.get("id"));
 }
