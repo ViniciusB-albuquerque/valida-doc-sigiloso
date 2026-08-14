@@ -24,7 +24,7 @@
   <header class="gs-navbar">
     <div class="gs-navbar-container">
       <a href="painel.html" class="gs-brand">
-        <div class="gs-brand-icon" title="Poder Judiciario">
+        <div class="gs-brand-icon" title="Poder Judiciário">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
             <path d="M2 17l10 5 10-5"></path>
@@ -33,7 +33,7 @@
         </div>
         <div class="gs-brand-info">
           <h1>VerificaJus <span class="gs-tag-pill">Painel</span></h1>
-          <p>Poder Judiciario &bull; Vara da Infancia e da Juventude</p>
+          <p>Poder Judiciário &bull; Vara da Infância e da Juventude</p>
         </div>
       </a>
 
@@ -59,12 +59,12 @@
   <footer class="gs-footer">
     <div class="gs-footer-container">
       <div><strong>VerificaJus Sigilo</strong> &bull; Sistema judicial descentralizado</div>
-      <div>Poder Judiciario &bull; Republica Federativa do Brasil</div>
+      <div>Poder Judiciário &bull; República Federativa do Brasil</div>
     </div>
   </footer>
 
   <script>
-    function card(iconeClasse, seloClasse, selo, titulo, subtitulo, texto, href, label) {
+    function card(iconeClasse, titulo, subtitulo, texto, href, label) {
       return `
         <div class="gs-card">
           <div class="gs-card-header">
@@ -77,7 +77,6 @@
                 <p>${subtitulo}</p>
               </div>
             </div>
-            <span class="gs-badge ${seloClasse}">${selo}</span>
           </div>
           <div class="gs-card-body">
             <p style="font-size:0.92rem; color:var(--gs-text-muted); line-height:1.6;">${texto}</p>
@@ -93,16 +92,16 @@
 
     if (SESSAO.perfil === "vara") {
       document.getElementById("descricaoPainel").textContent =
-        "A Vara administra a vida do documento: emite, registra hash, gera QR Code, audita acessos, revoga e substitui documentos.";
+        "A Vara administra os documentos: emite, registra o hash, gera o código de validação, audita acessos, revoga e substitui documentos.";
       document.getElementById("cardsAcoes").innerHTML =
-        card("icon-green", "gs-badge-green", "Emissao", "Emitir documento", "Registro on-chain pela Vara", "Registre o hash do documento sigiloso, defina validade e gere o QR Code dinamico para validacao.", "registrar.html", "Registrar documento") +
-        card("icon-gold", "gs-badge-gold", "Gestao", "Gerenciar e auditar", "Revogacao, substituicao e historico", "Busque documentos para auditar acessos, acompanhar substituicoes, revogar ou atualizar por uma nova versao.", "buscar.html", "Buscar documentos");
+        card("icon-green", "Emitir documento", "Registro feito pela Vara", "Registre o hash do documento sigiloso, defina a validade e gere o código de validação.", "registrar.html", "Registrar documento") +
+        card("icon-gold", "Gerenciar e auditar", "Revogação, substituição e histórico", "Busque documentos para auditar acessos, acompanhar substituições, revogar ou atualizar por uma nova versão.", "buscar.html", "Buscar documentos");
     } else {
       document.getElementById("descricaoPainel").textContent =
-        "Este perfil valida documentos por QR Code ou identificador e recebe apenas as informacoes autorizadas para sua classe.";
+        "Este perfil valida documentos por código ou identificador e recebe apenas as informações autorizadas para sua classe.";
       document.getElementById("cardsAcoes").innerHTML =
-        card("icon-green", "gs-badge-green", "QR Code", "Validar por QR Code", "Leitura rapida com camera", "Abra a camera, leia o QR Code e veja se o documento e valido. Ao assinar, o sistema mostra apenas seus campos permitidos.", "verificar.html", "Ler QR Code") +
-        card("icon-gold", "gs-badge-gold", "Documento", "Validar por identificador", "Quando o QR nao estiver disponivel", "Cole o documentId ou rotulo interno do documento para consultar o status e acessar os dados seletivos do seu perfil.", "verificar.html", "Informar documento");
+        card("icon-green", "Validar pela câmera", "Leitura rápida do código", "Abra a câmera, leia o código e veja se o documento é válido. Ao assinar, o sistema mostra apenas seus campos permitidos.", "verificar.html", "Ler código") +
+        card("icon-gold", "Validar por identificador", "Quando o código não estiver disponível", "Cole o documentId ou rótulo interno do documento para consultar o status e acessar os dados seletivos do seu perfil.", "verificar.html", "Informar documento");
     }
 
     document.getElementById("btnSair").onclick = () => {

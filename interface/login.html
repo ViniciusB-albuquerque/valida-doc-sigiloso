@@ -13,7 +13,7 @@
   <header class="gs-navbar">
     <div class="gs-navbar-container">
       <a href="login.html" class="gs-brand">
-        <div class="gs-brand-icon" title="Poder Judiciario">
+        <div class="gs-brand-icon" title="Poder Judiciário">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
             <path d="M2 17l10 5 10-5"></path>
@@ -21,8 +21,8 @@
           </svg>
         </div>
         <div class="gs-brand-info">
-          <h1>VerificaJus <span class="gs-tag-pill">Autenticacao</span></h1>
-          <p>Poder Judiciario &bull; Vara da Infancia e da Juventude</p>
+          <h1>VerificaJus <span class="gs-tag-pill">Acesso</span></h1>
+          <p>Poder Judiciário &bull; Vara da Infância e da Juventude</p>
         </div>
       </a>
     </div>
@@ -32,7 +32,7 @@
     <section class="gs-hero" style="padding: 2rem;">
       <h2 class="gs-hero-title" style="font-size: 1.75rem;">Selecione o perfil de acesso</h2>
       <p class="gs-hero-desc">
-        A Vara administra documentos. Policia Federal, companhia aerea e Conselho Tutelar validam documentos e recebem somente as informacoes autorizadas para seu perfil.
+        A Vara administra documentos. Polícia Federal, companhia aérea e Conselho Tutelar validam documentos e recebem somente as informações autorizadas para seu perfil.
       </p>
     </section>
 
@@ -43,11 +43,10 @@
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
           </div>
           <div class="gs-card-title">
-            <h3>Entrar como usuario de demonstracao</h3>
+            <h3>Entrar como usuário de demonstração</h3>
             <p>Todos usam a senha <code>senha123</code></p>
           </div>
         </div>
-        <span class="gs-badge gs-badge-blue">Demo</span>
       </div>
       <div class="gs-card-body">
         <div class="gs-grid-2col">
@@ -55,10 +54,10 @@
             Vara - administrador
           </button>
           <button class="gs-btn gs-btn-secondary perfil-btn" data-email="pf.exemplo@dpf.gov.br" style="justify-content:flex-start;">
-            Policia Federal
+            Polícia Federal
           </button>
           <button class="gs-btn gs-btn-secondary perfil-btn" data-email="aerea.exemplo@companhia.demo" style="justify-content:flex-start;">
-            Companhia Aerea
+            Companhia Aérea
           </button>
           <button class="gs-btn gs-btn-secondary perfil-btn" data-email="conselho.exemplo@ct.demo" style="justify-content:flex-start;">
             Conselho Tutelar
@@ -75,24 +74,15 @@
           </div>
           <div class="gs-card-title">
             <h3>Entrar manualmente</h3>
-            <p>Use credenciais institucionais cadastradas no backend</p>
+            <p>Use credenciais institucionais cadastradas no sistema</p>
           </div>
         </div>
       </div>
 
       <div class="gs-card-body">
         <div class="gs-form-control">
-          <label class="gs-form-label" for="inputBackend">
-            <span>URL do backend</span>
-            <span class="gs-form-hint">preenchido automaticamente</span>
-          </label>
-          <input id="inputBackend" type="text" class="gs-input gs-mono" placeholder="http://localhost:3001" />
-        </div>
-
-        <div class="gs-form-control">
           <label class="gs-form-label" for="inputEmail">
             <span>Email</span>
-            <span class="gs-form-hint">institucional</span>
           </label>
           <input id="inputEmail" type="email" class="gs-input" placeholder="juiz.exemplo@tjpb.jus.br" />
         </div>
@@ -100,7 +90,6 @@
         <div class="gs-form-control">
           <label class="gs-form-label" for="inputSenha">
             <span>Senha</span>
-            <span class="gs-form-hint">demo: senha123</span>
           </label>
           <input id="inputSenha" type="password" class="gs-input" placeholder="senha" />
         </div>
@@ -113,16 +102,14 @@
 
   <footer class="gs-footer">
     <div class="gs-footer-container">
-      <div><strong>VerificaJus Sigilo</strong> &bull; Sistema de autenticacao</div>
-      <div>Poder Judiciario &bull; Republica Federativa do Brasil</div>
+      <div><strong>VerificaJus Sigilo</strong> &bull; Sistema de autenticação</div>
+      <div>Poder Judiciário &bull; República Federativa do Brasil</div>
     </div>
   </footer>
 
   <script>
     const CHAVE_SESSAO = "verificajus_sessao";
     const SENHA_DEMO = "senha123";
-
-    document.getElementById("inputBackend").value = obterBackendPadrao();
 
     function mostrarErro(texto) {
       const el = document.getElementById("resultado");
@@ -131,7 +118,7 @@
     }
 
     async function entrar() {
-      const backendUrl = document.getElementById("inputBackend").value.trim().replace(/\/$/, "");
+      const backendUrl = obterBackendPadrao().replace(/\/$/, "");
       const email = document.getElementById("inputEmail").value.trim();
       const senha = document.getElementById("inputSenha").value;
 
@@ -145,7 +132,7 @@
         });
         const dados = await resp.json();
 
-        if (!resp.ok) return mostrarErro(dados.erro || "Nao foi possivel entrar.");
+        if (!resp.ok) return mostrarErro(dados.erro || "Não foi possível entrar.");
 
         sessionStorage.setItem(
           CHAVE_SESSAO,

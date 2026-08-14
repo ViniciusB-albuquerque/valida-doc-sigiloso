@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>VerificaJus Sigilo - Validacao por QR</title>
+  <title>VerificaJus Sigilo - Validação</title>
   <link rel="stylesheet" href="style.css" />
   <script src="https://unpkg.com/ethers@6/dist/ethers.umd.min.js" type="application/javascript"></script>
   <script src="util.js"></script>
@@ -18,7 +18,7 @@
   <header class="gs-navbar">
     <div class="gs-navbar-container">
       <a href="painel.html" class="gs-brand">
-        <div class="gs-brand-icon" title="Poder Judiciario">
+        <div class="gs-brand-icon" title="Poder Judiciário">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
             <path d="M2 17l10 5 10-5"></path>
@@ -26,8 +26,8 @@
           </svg>
         </div>
         <div class="gs-brand-info">
-          <h1>VerificaJus <span class="gs-tag-pill">Validacao</span></h1>
-          <p>QR Code &bull; Blockchain &bull; Acesso seletivo por perfil</p>
+          <h1>VerificaJus <span class="gs-tag-pill">Validação</span></h1>
+          <p>Leitura rápida &bull; Blockchain &bull; Acesso seletivo por perfil</p>
         </div>
       </a>
 
@@ -42,15 +42,10 @@
 
   <main class="gs-main-container">
     <section class="gs-hero">
-      <h2 class="gs-hero-title">Validacao rapida de documento judicial sigiloso</h2>
+      <h2 class="gs-hero-title">Validação rápida de documento judicial sigiloso</h2>
       <p class="gs-hero-desc">
-        A consulta publica confirma autenticidade e status. Apos assinatura com carteira cadastrada, cada perfil recebe somente os dados autorizados para sua classe.
+        A consulta pública confirma autenticidade e status. Após assinatura com carteira cadastrada, cada perfil recebe somente os dados autorizados para sua classe.
       </p>
-      <div class="gs-hero-badges">
-        <span class="gs-badge gs-badge-green"><span class="gs-badge-dot"></span> QR dinamico</span>
-        <span class="gs-badge gs-badge-blue">Validacao seletiva</span>
-        <span class="gs-badge gs-badge-gold">Auditoria on-chain</span>
-      </div>
     </section>
 
     <div class="gs-card" style="margin-bottom:2rem;">
@@ -60,26 +55,17 @@
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
           </div>
           <div class="gs-card-title">
-            <h3>Consulta publica</h3>
+            <h3>Consulta pública</h3>
             <p>Sem carteira: mostra status e validade do documento</p>
           </div>
         </div>
-        <span class="gs-badge gs-badge-green">Nivel 1</span>
       </div>
 
       <div class="gs-card-body">
         <div class="gs-grid-2col">
           <div class="gs-form-control">
-            <label class="gs-form-label" for="inputBackend">
-              <span>URL do backend</span>
-              <span class="gs-form-hint">preenchido automaticamente</span>
-            </label>
-            <input id="inputBackend" class="gs-input gs-mono" placeholder="http://localhost:3001" />
-          </div>
-          <div class="gs-form-control">
             <label class="gs-form-label" for="inputId">
               <span>Identificador do documento</span>
-              <span class="gs-form-hint">documentId ou rotulo interno</span>
             </label>
             <input id="inputId" class="gs-input gs-mono" placeholder="0x... ou alvara-viagem-0001" />
           </div>
@@ -87,13 +73,13 @@
 
         <div style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-top:0.75rem;">
           <button id="btnConsultarPublico" class="gs-btn gs-btn-primary">Validar agora</button>
-          <button id="btnLerQr" class="gs-btn gs-btn-secondary">Ler QR pela camera</button>
-          <button id="btnVerAtual" class="gs-btn gs-btn-secondary" style="display:none;">Abrir versao atual</button>
+          <button id="btnLerQr" class="gs-btn gs-btn-secondary">Ler código pela câmera</button>
+          <button id="btnVerAtual" class="gs-btn gs-btn-secondary" style="display:none;">Abrir versão atual</button>
         </div>
 
         <div id="scannerQr" style="display:none; margin-top:1rem;">
           <video id="videoQr" class="qr-video" playsinline muted></video>
-          <button id="btnPararQr" class="gs-btn gs-btn-secondary" style="margin-top:0.75rem;">Parar camera</button>
+          <button id="btnPararQr" class="gs-btn gs-btn-secondary" style="margin-top:0.75rem;">Parar câmera</button>
           <div id="resultadoQr" class="gs-alert-banner" style="display:none; margin-top:1rem;"></div>
         </div>
 
@@ -110,10 +96,9 @@
           </div>
           <div class="gs-card-title">
             <h3>Acesso autorizado por perfil</h3>
-            <p>Assinatura sem gas e retorno seletivo de informacoes</p>
+            <p>Assinatura sem gás e retorno seletivo de informações</p>
           </div>
         </div>
-        <span class="gs-badge gs-badge-gold">Nivel 2</span>
       </div>
 
       <div class="gs-card-body">
@@ -135,13 +120,13 @@
           </div>
           <div class="gs-card-title">
             <h3>Auditoria</h3>
-            <p>Historico de acessos e cadeia de substituicoes</p>
+            <p>Histórico de acessos e cadeia de substituições</p>
           </div>
         </div>
       </div>
       <div class="gs-card-body">
         <div id="historico" class="gs-log-container">
-          <div style="color:var(--gs-text-muted); font-size:0.85rem; padding:1.5rem; text-align:center;">Valide um documento para ver o historico de acessos.</div>
+          <div style="color:var(--gs-text-muted); font-size:0.85rem; padding:1.5rem; text-align:center;">Valide um documento para ver o histórico de acessos.</div>
         </div>
         <div id="cadeiaSubstituicoes" class="gs-log-container" style="display:none; margin-top:1rem;"></div>
       </div>
@@ -150,8 +135,8 @@
 
   <footer class="gs-footer">
     <div class="gs-footer-container">
-      <div><strong>VerificaJus Sigilo</strong> &bull; Portal de validacao seletiva</div>
-      <div>Poder Judiciario &bull; Republica Federativa do Brasil</div>
+      <div><strong>VerificaJus Sigilo</strong> &bull; Portal de validação seletiva</div>
+      <div>Poder Judiciário &bull; República Federativa do Brasil</div>
     </div>
   </footer>
 
@@ -164,15 +149,13 @@
 
     const params = new URLSearchParams(window.location.search);
     document.getElementById("inputId").value = params.get("id") || "";
-    document.getElementById("inputBackend").value = obterBackendPadrao();
-
     if (window.ethereum) {
       window.ethereum.on("accountsChanged", () => window.location.reload());
       window.ethereum.on("chainChanged", () => window.location.reload());
     }
 
     function backendUrl() {
-      return document.getElementById("inputBackend").value.trim().replace(/\/$/, "");
+      return obterBackendPadrao().replace(/\/$/, "");
     }
 
     function mostrar(id, texto, classe = "") {
@@ -193,10 +176,10 @@
 
     function descricaoDoStatus(status) {
       switch (status) {
-        case "Valido": return "Documento veridico, emitido pela Vara e em vigor.";
-        case "Expirado": return "Documento autentico, mas fora do prazo de validade.";
-        case "Revogado": return "Documento autentico, mas cancelado pela Vara.";
-        case "Substituido": return "Documento autentico, mas existe uma versao mais recente.";
+        case "Valido": return "Documento verídico, emitido pela Vara e em vigor.";
+        case "Expirado": return "Documento autêntico, mas fora do prazo de validade.";
+        case "Revogado": return "Documento autêntico, mas cancelado pela Vara.";
+        case "Substituido": return "Documento autêntico, mas existe uma versão mais recente.";
         default: return "Status desconhecido.";
       }
     }
@@ -210,10 +193,10 @@
 
     function formatarVisibilidade(dadosLiberados) {
       if (!dadosLiberados) return "Nenhum dado adicional liberado.";
-      const campos = dadosLiberados.camposPermitidos?.length ? dadosLiberados.camposPermitidos.join(", ") : "nenhum campo sensivel";
+      const campos = dadosLiberados.camposPermitidos?.length ? dadosLiberados.camposPermitidos.join(", ") : "nenhum campo sensível";
       const dados = formatarObjeto(dadosLiberados.dados);
       return (
-        `Nivel de visibilidade: ${dadosLiberados.nivel}\n` +
+        `Nível de visibilidade: ${dadosLiberados.nivel}\n` +
         `Regra: ${dadosLiberados.descricao}\n` +
         `Campos permitidos: ${campos}\n\n` +
         `Dados liberados para este perfil:\n${dados || "Nenhum dado adicional liberado."}`
@@ -229,7 +212,7 @@
       }
 
       el.style.display = "block";
-      el.textContent = "Cadeia de substituicoes:\n" + cadeia
+      el.textContent = "Cadeia de substituições:\n" + cadeia
         .map((salto) => {
           const quando = new Date(salto.quando).toLocaleString();
           const quem = salto.responsavelNome ? `${salto.responsavelNome} (${salto.responsavelInstituicao})` : salto.responsavel;
@@ -243,7 +226,7 @@
       try {
         const resp = await fetch(`${backendUrl()}/api/documentos/${documentId}/historico`);
         const dados = await resp.json();
-        if (!resp.ok) throw new Error(dados.erro || "Erro ao carregar historico.");
+        if (!resp.ok) throw new Error(dados.erro || "Erro ao carregar histórico.");
 
         if (mostrarCadeia) renderizarCadeiaSubstituicoes(dados.cadeiaSubstituicoes);
 
@@ -260,7 +243,7 @@
           })
           .join("\n");
       } catch (err) {
-        el.textContent = "Nao foi possivel carregar o historico: " + (err?.message || String(err));
+        el.textContent = "Não foi possível carregar o histórico: " + (err?.message || String(err));
         if (mostrarCadeia) renderizarCadeiaSubstituicoes([]);
       }
     }
@@ -275,13 +258,13 @@
       try {
         const resp = await fetch(`${backendUrl()}/api/documentos/${documentIdAtual}/status`);
         const dados = await resp.json();
-        if (!resp.ok) throw new Error(dados.erro || "Documento nao encontrado.");
+        if (!resp.ok) throw new Error(dados.erro || "Documento não encontrado.");
 
         const status = dados.status;
         const badge = document.getElementById("statusGrande");
         badge.style.display = "flex";
         badge.className = `gs-inspection-stamp gs-badge gs-badge-${status === "Valido" ? "green" : status === "Expirado" ? "gold" : "danger"}`;
-        badge.textContent = status === "Valido" ? "AUTORIZADO - DOCUMENTO VALIDO" : status.toUpperCase();
+        badge.textContent = status === "Valido" ? "AUTORIZADO - DOCUMENTO VÁLIDO" : status.toUpperCase();
 
         mostrar(
           "resultadoPublico",
@@ -314,12 +297,12 @@
 
     document.getElementById("btnLerQr").onclick = async () => {
       if (!navigator.mediaDevices?.getUserMedia) {
-        mostrar("resultadoQr", "Este navegador nao permite acesso a camera nesta pagina.", "gs-alert-banner failure");
+        mostrar("resultadoQr", "Este navegador não permite acesso à câmera nesta página.", "gs-alert-banner failure");
         document.getElementById("scannerQr").style.display = "block";
         return;
       }
       if (!("BarcodeDetector" in window)) {
-        mostrar("resultadoQr", "Este navegador nao suporta leitura nativa de QR Code. Use Chrome/Edge atual ou cole o codigo manualmente.", "gs-alert-banner failure");
+        mostrar("resultadoQr", "Este navegador não suporta leitura nativa do código. Use Chrome/Edge atual ou cole o identificador manualmente.", "gs-alert-banner failure");
         document.getElementById("scannerQr").style.display = "block";
         return;
       }
@@ -343,7 +326,7 @@
             const valor = codigos[0].rawValue;
             const id = extrairIdDoQr(valor);
             document.getElementById("inputId").value = id;
-            mostrar("resultadoQr", `QR lido: ${valor}\nIdentificador usado: ${id}`, "gs-alert-banner success mono-break");
+            mostrar("resultadoQr", `Código lido: ${valor}\nIdentificador usado: ${id}`, "gs-alert-banner success mono-break");
             await pararScannerQr();
             await consultarPublico(id);
             return;
@@ -352,7 +335,7 @@
         };
         requestAnimationFrame(detectar);
       } catch (err) {
-        mostrar("resultadoQr", "Falha ao abrir a camera: " + (err?.message || String(err)), "gs-alert-banner failure");
+        mostrar("resultadoQr", "Falha ao abrir a câmera: " + (err?.message || String(err)), "gs-alert-banner failure");
         await pararScannerQr();
         document.getElementById("scannerQr").style.display = "block";
       }
@@ -364,16 +347,16 @@
       try {
         const resp = await fetch(`${backendUrl()}/api/documentos/${documentIdAtual}/atual`);
         const dados = await resp.json();
-        if (!resp.ok) throw new Error(dados.erro || "Nao foi possivel resolver a versao atual.");
+        if (!resp.ok) throw new Error(dados.erro || "Não foi possível resolver a versão atual.");
         document.getElementById("inputId").value = dados.documentIdAtual;
         await consultarPublico(dados.documentIdAtual);
       } catch (err) {
-        mostrar("resultadoPublico", "Erro ao resolver versao atual: " + (err?.message || String(err)), "gs-alert-banner failure mono-break");
+        mostrar("resultadoPublico", "Erro ao resolver versão atual: " + (err?.message || String(err)), "gs-alert-banner failure mono-break");
       }
     };
 
     document.getElementById("btnConectar").onclick = async () => {
-      if (!window.ethereum) return alert("MetaMask nao encontrado.");
+      if (!window.ethereum) return alert("Carteira não encontrada.");
 
       providerCarteira = new ethers.BrowserProvider(window.ethereum);
       await providerCarteira.send("eth_requestAccounts", []);
@@ -404,7 +387,7 @@
         const dadosDesafio = await respDesafio.json();
         if (!respDesafio.ok) return mostrar("resultadoDetalhado", `Acesso negado: ${dadosDesafio.erro}`, "gs-alert-banner failure mono-break");
 
-        mostrar("resultadoDetalhado", "Aguardando assinatura no MetaMask...", "gs-alert-banner mono-break");
+        mostrar("resultadoDetalhado", "Aguardando assinatura na carteira...", "gs-alert-banner mono-break");
         const assinatura = await signer.signMessage(dadosDesafio.mensagem);
 
         mostrar("resultadoDetalhado", "Validando perfil e registrando acesso...", "gs-alert-banner mono-break");
@@ -427,7 +410,7 @@
           `documentHash: ${r.documentHash}\n` +
           `emissor: ${r.emissor}` + (r.emissorNome ? ` (${r.emissorNome} - ${r.emissorInstituicao})` : "") + `\n` +
           `emitidoEm: ${new Date(r.emitidoEm * 1000).toLocaleString()}\n` +
-          `expiraEm: ${r.expiraEm === 0 ? "sem expiracao" : new Date(r.expiraEm * 1000).toLocaleString()}\n` +
+          `expiraEm: ${r.expiraEm === 0 ? "sem expiração" : new Date(r.expiraEm * 1000).toLocaleString()}\n` +
           `status: ${r.status}\n\n` +
           visibilidade,
           "gs-alert-banner success mono-break"
@@ -435,7 +418,7 @@
 
         mostrar(
           "seloNaoRepudio",
-          `Acesso registrado de forma nao-repudiavel.\ntx: ${dadosAcesso.acessoRegistrado.txHash}\nbloco: ${dadosAcesso.acessoRegistrado.blockNumber}`,
+          `Acesso registrado de forma não repudiável.\ntx: ${dadosAcesso.acessoRegistrado.txHash}\nbloco: ${dadosAcesso.acessoRegistrado.blockNumber}`,
           "gs-alert-banner success mono-break"
         );
         await carregarHistorico(documentIdAtual, true);

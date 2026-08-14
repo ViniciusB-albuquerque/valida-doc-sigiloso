@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>VerificaJus Sigilo - Buscar Documentos</title>
+  <title>VerificaJus Sigilo - Buscar documentos</title>
   <link rel="stylesheet" href="style.css" />
   <script src="https://unpkg.com/ethers@6/dist/ethers.umd.min.js" type="application/javascript"></script>
   <script src="util.js"></script>
@@ -32,7 +32,7 @@
   <header class="gs-navbar">
     <div class="gs-navbar-container">
       <a href="painel.html" class="gs-brand">
-        <div class="gs-brand-icon" title="Poder Judiciario">
+        <div class="gs-brand-icon" title="Poder Judiciário">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
             <path d="M2 17l10 5 10-5"></path>
@@ -41,7 +41,7 @@
         </div>
         <div class="gs-brand-info">
           <h1>VerificaJus <span class="gs-tag-pill">Busca</span></h1>
-          <p>Localizacao, validacao e gestao de documentos sigilosos</p>
+          <p>Localização, validação e gestão de documentos sigilosos</p>
         </div>
       </a>
       <div class="gs-navbar-actions">
@@ -62,8 +62,6 @@
       </p>
       <div class="gs-hero-badges">
         <span class="gs-badge gs-badge-blue" id="badgeSessao">perfil</span>
-        <span class="gs-badge gs-badge-green"><span class="gs-badge-dot"></span> Consulta via backend</span>
-        <span class="gs-badge gs-badge-gold">Status on-chain</span>
       </div>
     </section>
 
@@ -74,22 +72,13 @@
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
           </div>
           <div class="gs-card-title">
-            <h3>Parametros de busca</h3>
+            <h3>Parâmetros de busca</h3>
             <p>Escolha um modo de consulta</p>
           </div>
         </div>
-        <span class="gs-badge gs-badge-green">Indexador + contrato</span>
       </div>
 
       <div class="gs-card-body">
-        <div class="gs-form-control">
-          <label class="gs-form-label" for="inputBackend">
-            <span>URL do backend</span>
-            <span class="gs-form-hint">preenchido automaticamente</span>
-          </label>
-          <input id="inputBackend" class="gs-input gs-mono" placeholder="http://localhost:3001" />
-        </div>
-
         <div class="gs-nav-tabs" style="width:fit-content; margin-bottom:1rem;">
           <label class="gs-nav-tab-item active"><input type="radio" name="modo" value="id" checked /> Identificador</label>
           <label class="gs-nav-tab-item"><input type="radio" name="modo" value="hash" /> Arquivo</label>
@@ -100,7 +89,6 @@
           <div class="gs-form-control">
             <label class="gs-form-label" for="inputId">
               <span>Identificador do documento</span>
-              <span class="gs-form-hint">documentId ou rotulo interno</span>
             </label>
             <input id="inputId" class="gs-input gs-mono" placeholder="0x... ou alvara-viagem-0001" />
           </div>
@@ -109,13 +97,12 @@
         <div id="campoHash" class="campo-modo">
           <div class="gs-form-control">
             <label class="gs-form-label" for="inputArquivo">
-              <span>Documento PDF</span>
-              <span class="gs-form-hint">busca pelo mesmo conteudo registrado</span>
+              <span>Documento em PDF</span>
             </label>
             <div class="gs-dropzone">
               <input id="inputArquivo" type="file" accept="application/pdf" />
               <div class="gs-dropzone-title">Clique ou arraste o PDF</div>
-              <div class="gs-dropzone-desc">O hash e calculado localmente para consulta.</div>
+              <div class="gs-dropzone-desc">O hash é calculado localmente para consulta.</div>
             </div>
           </div>
         </div>
@@ -126,10 +113,10 @@
               <label class="gs-form-label" for="inputStatus"><span>Status</span></label>
               <select id="inputStatus" class="gs-input">
                 <option value="">Qualquer</option>
-                <option value="Valido">Valido</option>
+                <option value="Valido">Válido</option>
                 <option value="Expirado">Expirado</option>
                 <option value="Revogado">Revogado</option>
-                <option value="Substituido">Substituido</option>
+                <option value="Substituido">Substituído</option>
               </select>
             </div>
             <div class="gs-form-control">
@@ -137,7 +124,7 @@
               <input id="inputDesde" type="date" class="gs-input" />
             </div>
             <div class="gs-form-control">
-              <label class="gs-form-label" for="inputAte"><span>Emitido ate</span></label>
+              <label class="gs-form-label" for="inputAte"><span>Emitido até</span></label>
               <input id="inputAte" type="date" class="gs-input" />
             </div>
           </div>
@@ -153,7 +140,7 @@
   <footer class="gs-footer">
     <div class="gs-footer-container">
       <div><strong>VerificaJus Sigilo</strong> &bull; Busca e auditoria</div>
-      <div>Poder Judiciario &bull; Republica Federativa do Brasil</div>
+      <div>Poder Judiciário &bull; República Federativa do Brasil</div>
     </div>
   </footer>
 
@@ -162,14 +149,12 @@
     if (SESSAO.perfil === "vara") {
       document.getElementById("tituloBusca").textContent = "Gerenciar e auditar documentos";
       document.getElementById("descricaoBusca").textContent =
-        "A Vara pode localizar documentos para validar status, auditar acessos, revogar ou substituir por uma nova versao.";
+        "A Vara pode localizar documentos para validar status, auditar acessos, revogar ou substituir por uma nova versão.";
     } else {
       document.getElementById("tituloBusca").textContent = "Validar documento por busca";
       document.getElementById("descricaoBusca").textContent =
-        "Perfis verificadores podem localizar um documento e seguir para a validacao seletiva.";
+        "Perfis verificadores podem localizar um documento e seguir para a validação seletiva.";
     }
-
-    document.getElementById("inputBackend").value = obterBackendPadrao();
 
     document.querySelectorAll('input[name="modo"]').forEach((radio) => {
       radio.addEventListener("change", () => {
@@ -200,7 +185,7 @@
     function formatarData(valor) {
       if (valor === undefined || valor === null) return "-";
       if (typeof valor === "number") {
-        if (valor === 0) return "sem expiracao";
+        if (valor === 0) return "sem expiração";
         return new Date(valor * 1000).toLocaleString();
       }
       return new Date(valor).toLocaleString();
@@ -237,7 +222,7 @@
           <span class="gs-badge ${badgeClasse}">${doc.status || "status desconhecido"}</span>
         </div>
         <div class="gs-card-body">
-          <p style="font-size:0.9rem; color:var(--gs-text-muted);">${detalhes.join(" | ") || "Abra a validacao para confirmar o status ao vivo."}</p>
+          <p style="font-size:0.9rem; color:var(--gs-text-muted);">${detalhes.join(" | ") || "Abra a validação para confirmar o status ao vivo."}</p>
           <div style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-top:0.75rem;">
             <a href="${linkVerificar.toString()}" class="gs-btn gs-btn-primary">Validar documento</a>
             ${linkGestao}
@@ -248,7 +233,7 @@
     }
 
     document.getElementById("btnBuscar").onclick = async () => {
-      const backendUrl = document.getElementById("inputBackend").value.trim().replace(/\/$/, "");
+      const backendUrl = obterBackendPadrao().replace(/\/$/, "");
       const modo = document.querySelector('input[name="modo"]:checked').value;
       const msgEl = document.getElementById("resultadoMsg");
       const listaEl = document.getElementById("listaResultados");

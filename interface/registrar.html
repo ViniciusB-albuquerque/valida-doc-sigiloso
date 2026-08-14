@@ -31,7 +31,7 @@
   <header class="gs-navbar">
     <div class="gs-navbar-container">
       <a href="painel.html" class="gs-brand">
-        <div class="gs-brand-icon" title="Poder Judiciario">
+        <div class="gs-brand-icon" title="Poder Judiciário">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
             <path d="M2 17l10 5 10-5"></path>
@@ -39,8 +39,8 @@
           </svg>
         </div>
         <div class="gs-brand-info">
-          <h1>VerificaJus <span class="gs-tag-pill">Emissao</span></h1>
-          <p>Painel administrativo da Vara da Infancia e Juventude</p>
+          <h1>VerificaJus <span class="gs-tag-pill">Vara</span></h1>
+          <p>Painel administrativo da Vara da Infância e Juventude</p>
         </div>
       </a>
       <div class="gs-navbar-actions">
@@ -57,13 +57,8 @@
     <section class="gs-hero">
       <h2 class="gs-hero-title">Emitir documento judicial sigiloso</h2>
       <p class="gs-hero-desc">
-        A Vara registra somente o hash e metadados de validade na blockchain. O PDF nao e enviado ao backend nem gravado on-chain.
+        A Vara registra somente o hash e os metadados de validade na blockchain. O PDF não é enviado ao sistema nem gravado na rede.
       </p>
-      <div class="gs-hero-badges">
-        <span class="gs-badge gs-badge-green"><span class="gs-badge-dot"></span> Somente Vara</span>
-        <span class="gs-badge gs-badge-blue">Hash local do PDF</span>
-        <span class="gs-badge gs-badge-gold">QR dinamico</span>
-      </div>
     </section>
 
     <div class="gs-card" style="margin-bottom:2rem;">
@@ -73,25 +68,22 @@
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7h-9"></path><path d="M14 17H5"></path><circle cx="17" cy="17" r="3"></circle><circle cx="7" cy="7" r="3"></circle></svg>
           </div>
           <div class="gs-card-title">
-            <h3>Conexao administrativa</h3>
-            <p>MetaMask deve estar na conta da Vara autorizada pelo contrato</p>
+            <h3>Conexão administrativa</h3>
+            <p>Use a carteira da Vara autorizada pelo contrato</p>
           </div>
         </div>
-        <span class="gs-badge gs-badge-gold">Admin</span>
       </div>
       <div class="gs-card-body">
         <div class="gs-grid-2col">
           <div class="gs-form-control">
             <label class="gs-form-label" for="inputEndereco">
-              <span>Endereco do contrato</span>
-              <span class="gs-form-hint">preenchido pelo backend</span>
+              <span>Endereço do contrato</span>
             </label>
             <input id="inputEndereco" class="gs-input gs-mono" placeholder="0x..." />
           </div>
           <div class="gs-form-control">
             <label class="gs-form-label">
               <span>Carteira administrativa</span>
-              <span class="gs-form-hint">MetaMask</span>
             </label>
             <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
               <button id="btnConectar" class="gs-btn gs-btn-secondary">Conectar carteira</button>
@@ -115,21 +107,18 @@
             <p>Identificador interno, PDF e prazo de validade</p>
           </div>
         </div>
-        <span class="gs-badge gs-badge-green">On-chain</span>
       </div>
       <div class="gs-card-body">
         <div class="gs-grid-2col">
           <div class="gs-form-control">
             <label class="gs-form-label" for="regRotulo">
               <span>Identificador interno</span>
-              <span class="gs-form-hint">ex.: alvara-viagem-0001</span>
             </label>
             <input id="regRotulo" class="gs-input gs-mono" placeholder="alvara-viagem-0001" />
           </div>
           <div class="gs-form-control">
             <label class="gs-form-label" for="regExpira">
               <span>Expira em</span>
-              <span class="gs-form-hint">opcional</span>
             </label>
             <input id="regExpira" type="datetime-local" class="gs-input" />
           </div>
@@ -138,23 +127,22 @@
         <div class="gs-form-control">
           <label class="gs-form-label" for="regArquivo">
             <span>Documento PDF</span>
-            <span class="gs-form-hint">hash calculado no navegador</span>
           </label>
           <div class="gs-dropzone">
             <input id="regArquivo" type="file" accept="application/pdf" />
             <div class="gs-dropzone-title">Clique ou arraste o PDF para calcular o hash</div>
-            <div class="gs-dropzone-desc">O arquivo nao sai do navegador; somente o hash e registrado.</div>
+            <div class="gs-dropzone-desc">O arquivo não sai do navegador; somente o hash é registrado.</div>
           </div>
         </div>
 
         <div id="regHashPreview" class="gs-alert-banner mono-break" style="display:none; margin-top:1rem;"></div>
         <div id="avisoHashDuplicado" class="gs-alert-banner failure mono-break" style="display:none; margin-top:1rem;"></div>
 
-        <button id="btnRegistrar" class="gs-btn gs-btn-primary" style="margin-top:1rem;">Registrar e gerar QR Code</button>
+        <button id="btnRegistrar" class="gs-btn gs-btn-primary" style="margin-top:1rem;">Registrar e gerar código</button>
         <div id="resultadoRegistrar" class="gs-alert-banner mono-break" style="display:none; margin-top:1rem;"></div>
 
         <div id="qrResultado" class="qr-box" style="display:none;">
-          <img id="qrImagem" alt="QR Code de verificacao" width="220" height="220" />
+          <img id="qrImagem" alt="Código de verificação" width="220" height="220" />
           <div id="qrLink" class="gs-mono mono-break" style="font-size:0.78rem; color:var(--gs-text-muted); margin-top:0.75rem;"></div>
         </div>
       </div>
@@ -163,8 +151,8 @@
 
   <footer class="gs-footer">
     <div class="gs-footer-container">
-      <div><strong>VerificaJus Sigilo</strong> &bull; Emissao administrativa</div>
-      <div>Poder Judiciario &bull; Republica Federativa do Brasil</div>
+      <div><strong>VerificaJus Sigilo</strong> &bull; Emissão administrativa</div>
+      <div>Poder Judiciário &bull; República Federativa do Brasil</div>
     </div>
   </footer>
 
@@ -188,7 +176,7 @@
       .then((config) => {
         document.getElementById("inputEndereco").value = config.contratoEndereco;
       })
-      .catch((err) => console.warn("Nao foi possivel carregar config do backend:", err));
+      .catch((err) => console.warn("Não foi possível carregar config do backend:", err));
 
     async function hashArquivo(file) {
       const buffer = await file.arrayBuffer();
@@ -228,13 +216,13 @@
     }
 
     document.getElementById("btnConectar").onclick = async () => {
-      if (!window.ethereum) return alert("MetaMask nao encontrado.");
+      if (!window.ethereum) return alert("Carteira não encontrada.");
       provider = new ethers.BrowserProvider(window.ethereum);
       await provider.send("eth_requestAccounts", []);
 
       const rede = await provider.getNetwork();
       if (rede.chainId !== CHAIN_ID_ESPERADO) {
-        mostrar("contaAtual", `Rede incorreta (chainId ${rede.chainId}). Use Hardhat Local, chainId 1337.`, "gs-alert-banner failure mono-break");
+        mostrar("contaAtual", `Rede incorreta (chainId ${rede.chainId}). Use a rede Hardhat Local, chainId 1337.`, "gs-alert-banner failure mono-break");
         return;
       }
 
@@ -244,8 +232,8 @@
 
     document.getElementById("btnCarregar").onclick = async () => {
       const endereco = document.getElementById("inputEndereco").value.trim();
-      if (!ethers.isAddress(endereco)) return alert("Endereco de contrato invalido.");
-      if (!signer) return alert("Conecte o MetaMask primeiro.");
+      if (!ethers.isAddress(endereco)) return alert("Endereço de contrato inválido.");
+      if (!signer) return alert("Conecte a carteira primeiro.");
 
       contrato = new ethers.Contract(endereco, ABI, signer);
       const enderecoVara = await contrato.vara();
@@ -273,12 +261,12 @@
           linkVerificar.searchParams.set("id", documentIdExistente);
           avisoEl.style.display = "flex";
           avisoEl.innerHTML =
-            `Este documento ja foi registrado sob outro identificador.<br/>` +
+            `Este documento já foi registrado sob outro identificador.<br/>` +
             `<a href="${linkVerificar.toString()}" target="_blank">Ver documento existente</a>`;
           btnRegistrar.disabled = true;
         }
       } catch (err) {
-        console.warn("Nao foi possivel checar duplicata por hash:", err);
+        console.warn("Não foi possível checar duplicata por hash:", err);
       }
     });
 
@@ -305,7 +293,7 @@
 
       try {
         const tx = await contrato.registrarDocumento(documentId, documentHash, expiraEm);
-        mostrar("resultadoRegistrar", `Transacao enviada: ${tx.hash}\nAguardando confirmacao...`, "gs-alert-banner mono-break");
+        mostrar("resultadoRegistrar", `Transação enviada: ${tx.hash}\nAguardando confirmação...`, "gs-alert-banner mono-break");
         const receipt = await tx.wait();
         mostrar("resultadoRegistrar", `Confirmado no bloco ${receipt.blockNumber}\ntx: ${receipt.hash}\ndocumentId: ${documentId}`, "gs-alert-banner success mono-break");
         gerarQrParaDocumento(documentId);
